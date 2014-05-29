@@ -317,7 +317,8 @@ class WeibullFeature(AbstractContinuousFeature):
             parameters from
         @return (list): The shape and scale parameters (floats) packed into a list
         """
-        weibull_params = stats.weibull_min.fit(observations, floc=0) # floc=0 keeps the location fixed at zero,
+        quantiles = np.percentile(observations, [10, 30, 50, 70, 90]) # the weibull_min.fit function expects quantiles rather than the actual observations
+        weibull_params = stats.weibull_min.fit(quantiles, floc=0) # floc=0 keeps the location fixed at zero,
             # i.e, we assume that all observations are positive (lower bound = 0).
         return weibull_params
 

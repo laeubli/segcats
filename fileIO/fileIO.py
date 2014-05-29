@@ -31,8 +31,10 @@ def readObservations ( path ):
     for file_path in glob.glob(path):
         observation_sequence = []
         with open(file_path, 'r') as file:
-            for line_number, line in enumerate(file):
-                if line != '':
+            line_number = 0
+            for line in file:
+                if line != '' and not line.startswith('#'):
+                    line = line.strip()
                     line = line.split('#')[0] # discard comments after any hashtag
                     values = [value.strip() for value in line.split('\t') if value != '']
                     if line_number == 0:
@@ -40,6 +42,7 @@ def readObservations ( path ):
                             validateFeature(feature)
                         if features == []:
                             features = values
+                            features_initialised = True
                         else:
                             if features != values:
                                 sys.exit("Error reading observation sequences: The feature definition in %s differs from the previously read files." % file_path)
@@ -51,6 +54,7 @@ def readObservations ( path ):
                             else:
                                 observation.append(float(value)) # force conversion to float for continuous feature values (Gaussian, Weibull)
                         observation_sequence.append(observation)
+                    line_number +=1
         observation_sequences.append(observation_sequence)
     
     return features, observation_sequences
