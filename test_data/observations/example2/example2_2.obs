@@ -1,0 +1,8 @@
+D	W	D # features ( D = discrete, G = Gaussian, W = Weibull )
+keydown	180	target
+keydown	31	target
+keydown	89	target
+fixation	300	source
+keydown	890	target
+keydown	39	target
+fixation	120	target
