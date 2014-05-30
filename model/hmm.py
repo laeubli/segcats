@@ -155,3 +155,62 @@ class HMM:
                     matrix.append(row)
         return matrix
     
+    def transitionProb ( self, from_state, to_state ):
+        """
+        Returns the probability of going from @param start_state to @param end_state.
+        @param start_state (str/int): the name or index of the start state
+        @param end_state (str/int): the name or index of the end state 
+        @return: the probability of going from @param start_state to @param end_state
+        """
+        try:
+            return self._transition_probs[from_state][to_state]
+        except TypeError:
+            if isinstance(from_state, str):
+                from_state = self._transition_probs.index(from_state)
+            if isinstance(to_state, str):
+                from_state = self._transition_probs.index(to_state)
+            return self.transtitionProb(from_state, to_state)
+    
+    def observationProb ( self, state, observation ):
+        """
+        Returns the probability of seing @param observation in @param state, given all feature
+        streams.
+        @param state (str/int): the name or index of the state
+        @param observation (list): the observation, consisting of 1..(len(self._features)) features
+        @return float: the probability of seing @param observation in @param state
+        """
+        try:
+            observation_prob = 0.0
+            for i, feature in enumerate(self._features):
+                observation_prob += feature.getProbability(state, observation[i])
+            return observation_prob
+        except TypeError:
+            return None # special case for zero probability
+    
+    def forwardProb ( self, observation_sequence ):
+        """
+        Implements the forward algorithm in log space.
+        @param observation_sequence: a list of observations, each observation being a list of
+            1..* feature values (one for each feature of this HMM).
+        @return: The joint probability of seeing @param observation_sequence, given this HMM's
+            transition and observation parameters.
+        """
+        # create trellis (dynamic programming matrix)
+        fp = [] #fp[state][time]
+        # initialisation
+        for i, state in enumerate(self._states):
+            fp.append( [ logproduct(self.transitionProb(0,i), self.observationProb(i, observation_sequence[0])) ] )
+        # fill trellis
+        for t in range(1, len(observation_sequence)): # for each time t
+            for j, state in enumerate(self._states): # for each state j
+                fp_j = None
+                for i, state in enumerate(self._states): # for each previous state i
+                    fp_j = logsum( fp_j, logproduct(fp[i][t-1],self.transitionProb(i,j)) )
+                fp[j].append( logproduct(fp_j, self.observationProb(j,observation_sequence[t])) )
+        # calculate final probability
+        forward_prob = None
+        end_state_index = len(self._states)-1
+        for i, state in enumerate(self._states): # for each previous state i
+                    forward_prob = logsum( forward_prob, logproduct(fp[i][t],self.transitionProb(i,end_state_index)) ) # t is still set from above! (= last time step)
+        return forward_prob
+            

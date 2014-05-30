@@ -196,7 +196,7 @@ class DiscreteFeature(AbstractFeature):
         try:
             return self._vocabulary.index(observation)
         except:
-            sys.exit("Error: Observation %s was never seen in training." % observation)
+            sys.exit('Error: Observation "%s" was never seen in training.' % observation)
     
     def getVocabulary ( self ):
         return self._vocabulary
