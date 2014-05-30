@@ -10,7 +10,7 @@ import fileIO
 states = ['START', 'H1', 'H2', 'H3', 'END']
 
 #features, observations = fileIO.readObservations('example.obs')
-features, observations = fileIO.readObservations('example2*.obs')
+features, observations = fileIO.readObservations('example1*.obs')
 
 myHMM = HMM(states=states, features=features, observation_sequences=observations, topology='fully-connected')
 print myHMM._transition_probs

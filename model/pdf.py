@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 """
 Defines the HMM feature functions (PDFs).
+IMPORTANT: All probabilities are natural logarithms, normally derived through log() from the shared packet
 """
 
 from __future__ import division
 
 import sys, math
 import numpy as np
+from shared import *
 from scipy import stats
 from matplotlib import pyplot as plt
 
@@ -179,6 +181,7 @@ class DiscreteFeature(AbstractFeature):
         total_observations = sum(observations.values())
         for observation in self._vocabulary:
             initial_observation_probability = observations[observation] / total_observations
+            initial_observation_probability = log(initial_observation_probability) # logarithmise
             for i, state in enumerate(self._states):
                 if state not in ['START', 'END']: # START and END states are non-emiting
                     self._observation_probabilities[i].append(initial_observation_probability)
@@ -234,7 +237,7 @@ class DiscreteFeature(AbstractFeature):
             state = self.getStateIndex(state)
         # get labels and probabilities
         labels = self._vocabulary
-        probs = self._observation_probabilities[state]
+        probs = [math.exp(prob) for prob in self._observation_probabilities[state]] # convert log probs back to normal probs for the plot
         # format the plot
         pos = np.arange(len(labels))
         width = 0.75
@@ -282,7 +285,7 @@ class GaussianFeature(AbstractContinuousFeature):
         assert isinstance(observation, float)
         mean = parameters[0]
         std = parameters[1]
-        return stats.norm.pdf(observation, mean, std)
+        return stats.norm.logpdf(observation, mean, std)
     
     def plot ( self, state, observations=None ):
         """
@@ -332,7 +335,7 @@ class WeibullFeature(AbstractContinuousFeature):
             Weibull
         """
         assert isinstance(observation, float)
-        return stats.weibull_min.pdf(observation, *parameters)
+        return stats.weibull_min.logpdf(observation, *parameters)
     
     def plot ( self, state, observations=None ):
         """

@@ -5,11 +5,12 @@ Global test driver
 """
 
 import model, fileIO
+from shared import *
 
 states = ['START', 'H1', 'H2', 'H3', 'END']
 
 #features, observations = fileIO.readObservations('example.obs')
-features, observations = fileIO.readObservations('test_data/observations/example3G/*.obs')
+features, observations = fileIO.readObservations('test_data/observations/example2/*.obs')
 
 myHMM = model.HMM(states=states, features=features, observation_sequences=observations, topology='fully-connected')
 print myHMM._transition_probs
