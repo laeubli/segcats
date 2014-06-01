@@ -187,30 +187,122 @@ class HMM:
         except TypeError:
             return None # special case for zero probability
     
-    def forwardProb ( self, observation_sequence ):
+    def forwardProbability ( self, observation_sequence, time_t=None, state_s=None ):
         """
-        Implements the forward algorithm in log space.
+        Implements the forward algorithm in log space. Computes the probability of seeing the
+        observations in @param observation_sequence from start (time 0) to time @param t, given 
+        that we are in state @param s at time @param t.
         @param observation_sequence: a list of observations, each observation being a list of
-            1..* feature values (one for each feature of this HMM).
-        @return: The joint probability of seeing @param observation_sequence, given this HMM's
-            transition and observation parameters.
+            1..* feature values (one for each feature of this HMM)
+        @param t (int): the index of the observation in @param observation_sequence at time t
+        @param s (str/int): the name (str) or index (int) of the state s
+        @return: If t and s are given: The forward probability in time t and state s
+                 If t is given and s=None: A list of forward probabilities, the order of which
+                     corresponds to each state in self._states
+                 If t=None and s=None: The forward probability of the whole observation sequence
+                     from START to END.
         """
+        if time_t == None:
+            t_to = len(observation_sequence)-1
+            if state_s != None:
+                sys.exit("Error computing forward probability: time t must be given when state s is specified.")
+        else:
+            t_to = time_t
+        assert (t_to) < len(observation_sequence)
         # create trellis (dynamic programming matrix)
         fp = [] #fp[state][time]
         # initialisation
         for i, state in enumerate(self._states):
             fp.append( [ logproduct(self.transitionProb(0,i), self.observationProb(i, observation_sequence[0])) ] )
         # fill trellis
-        for t in range(1, len(observation_sequence)): # for each time t
+        for t in range(1, t_to+1): # for each time t
             for j, state in enumerate(self._states): # for each state j
                 fp_j = None
                 for i, state in enumerate(self._states): # for each previous state i
                     fp_j = logsum( fp_j, logproduct(fp[i][t-1],self.transitionProb(i,j)) )
                 fp[j].append( logproduct(fp_j, self.observationProb(j,observation_sequence[t])) )
-        # calculate final probability
-        forward_prob = None
-        end_state_index = len(self._states)-1
-        for i, state in enumerate(self._states): # for each previous state i
-                    forward_prob = logsum( forward_prob, logproduct(fp[i][t],self.transitionProb(i,end_state_index)) ) # t is still set from above! (= last time step)
-        return forward_prob
+        # return according to provided parameters
+        if state_s == None:
+            if time_t==None:
+                # calculate total forward probability
+                forward_prob = None
+                end_state_index = len(self._states)-1
+                for i, state in enumerate(self._states): # for each previous state i
+                            forward_prob = logsum( forward_prob, logproduct(fp[i][t_to],self.transitionProb(i,end_state_index)) ) # t is still set from above! (= last time step)
+                return forward_prob
+            else:
+                return [forward_prob[t_to] for forward_prob in fp]
+        else:
+            try:
+                return fp[state_s][t_to]
+            except TypeError:
+                # if the name rather than the index of the state s is provided
+                try:
+                    return fp[self._states.index(state_s)][t_to]
+                except:
+                    if state_s in [0, len(self._states)-1, 'START', 'END']:
+                        sys.exit("Error computing backward probability: START and END states have no backward probability at time t.") 
+    
+    def backwardProbability ( self, observation_sequence, time_t=None, state_s=None ):
+        """
+        Implements the backward algorithm in log space. Computes the probability of seeing the
+        observations in @param observation_sequence from time @param t + 1 to end, given that we 
+        are in state @param s at time @param t.
+        @param observation_sequence: a list of observations, each observation being a list of
+            1..* feature values (one for each feature of this HMM)
+        @param t (int): the index of the observation in @param observation_sequence at time t
+        @param s (str/int): the name (str) or index (int) of the state s
+        @return: If t and s are given: The backward probability in time t and state s
+                 If t is given and s=None: A list of backward probabilities, the order of which
+                     corresponds to each state in self._states
+                 If t=None and s=None: The backward probability of the whole observation sequence
+                     from START to END.
+        """
+        if time_t == None:
+            t = 0
+            if state_s != None:
+                sys.exit("Error computing backward probability: time t must be given when state s is specified.")
+        else:
+            t = time_t
+        # prepare ranges
+        len_obs = len(observation_sequence)
+        assert (t) < len_obs
+        state_range = range(1, len(self._states)-1)
+        # create trellis (dynamic programming matrix)
+        bp = [] #bp[state][time] NOTE: Time is reversed in this trellis!
+        # initialisation
+        bp.append(None) # for START state
+        for i in state_range:
+            bp.append( [ self.transitionProb(i,len(self._states)-1) ] ) # transition probability from each possible state to 'END' state
+        bp.append(None) # for END state
+        # fill trellis
+        for t_b in range(0, len_obs-1-t): # t_b is the index of the next backprob (B_t+1) to be retrieved
+            t_o = len_obs-1-t_b # t_o is the index of the next observation (o_t+1) to be retrieved
+            for i in state_range:
+                bp_i = None
+                for j in state_range:
+                    # bp_i = sum: self._transitionProb(i,j) * self._observationProb(j, t_o) * bp[j][t]
+                    bp_i = logsum( bp_i, logproduct( self.transitionProb(i,j), logproduct( self.observationProb(j, observation_sequence[t_o]), bp[j][t_b] ) ) )
+                bp[i].append(bp_i)
+        # return according to provided parameters
+        if state_s == None:
+            if time_t==None:
+                # return the backward probability for the whole observation sequence
+                backward_prob = None
+                for j in state_range: # for each previous state j
+                            backward_prob = logsum( backward_prob, logproduct( self.transitionProb(0,j), logproduct( self.observationProb(j, observation_sequence[0]), bp[j][len(bp[j])-1] ) ) )
+                return backward_prob
+            else:
+                # return the backward probabilities for all states at time t
+                return [None] + [backward_prob[len_obs-1-t] for backward_prob in bp[1:-1]] + [None]
+        else:
+            try:
+                return bp[state_s][len_obs-1-t]
+            except TypeError:
+                # if the name rather than the index of the state s is provided
+                try:
+                    return bp[self._states.index(state_s)][len_obs-1-t]
+                except:
+                    if state_s in [0, len(self._states)-1, 'START', 'END']:
+                        sys.exit("Error computing backward probability: START and END states have no backward probability at time t.")
             

@@ -16,4 +16,13 @@ myHMM = model.HMM(states=states, features=features, observation_sequences=observ
 #print myHMM._transition_probs
 #print myHMM.transitionProb(0,2)
 #print myHMM.observationProb(2, ['keydown', 31.0, 'source'])
-print myHMM.forwardProb( [ ['keydown', 31.0, 'source'], ['keydown', 100.0, 'source'], ['fixation', 200.0, 'target'], ])
+
+test_obs_seq = [ ['keydown', 31.0, 'source'], ['keydown', 100.0, 'source'], ['fixation', 200.0, 'target'], ]
+
+print myHMM.forwardProbability( test_obs_seq ) # forward probability of the whole observation sequence (=total observation probability)
+print myHMM.forwardProbability( test_obs_seq, 0 ) # forward probabilities for all states at time 0
+print myHMM.forwardProbability( test_obs_seq, 1, 'H3' ) # forward probability for state H3 at time 1
+
+print myHMM.backwardProbability( test_obs_seq ) # backward probability of the whole observation sequence (=total observation probability)
+print myHMM.backwardProbability( test_obs_seq, 0 ) # backward probabilities for all states at time 0
+print myHMM.backwardProbability( test_obs_seq, 1, 'H3' ) # backward probability for state H3 at time 1
