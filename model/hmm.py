@@ -305,4 +305,52 @@ class HMM:
                 except:
                     if state_s in [0, len(self._states)-1, 'START', 'END']:
                         sys.exit("Error computing backward probability: START and END states have no backward probability at time t.")
-            
+    
+    def viterbiProbability ( self, observation_sequence ):
+        """
+        Implements the Viterbi algorithm in log space. Finds the most probable sequence of
+        states given an @param observation_sequence and this HMM's transition and observation
+        parameters.
+        @param observation_sequence: a list of observations, each observation being a list of
+            1..* feature values (one for each feature of this HMM)
+        @return (tuple): the most probable state sequence, encoded as a list of indices
+            corresponding to self._states, as well as its score (log probability).
+        """
+        # initialise trellis
+        trellis = [] # trellis[state][time] = (viterbi_prob, backpointer)
+        for i, state in enumerate(self._states):
+            first_viterbi = logproduct( self.transitionProb(0,i), self.observationProb(i, observation_sequence[0]) )
+            first_backpointer = 0 # Index of START state
+            trellis.append([(first_viterbi,first_backpointer)])
+        # recursion
+        for t, observation in enumerate(observation_sequence[1:], 1): # for every time t > 0
+            # find maximum Viterbi probability at t-1
+            max = (None,None)
+            for i, state in enumerate(self._states):
+                if trellis[i][t-1][0] > max[0]:
+                    max = ( trellis[i][t-1][0], i )
+            for j, state in enumerate(self._states):
+                backpointer = max[1]
+                viterbi = logproduct( max[0], logproduct( self.transitionProb(backpointer,j), self.observationProb(j, observation) ) )
+                trellis[j].append( (viterbi, backpointer) )
+        # termination
+        # find maximum Viterbi probability at T
+        max = (None,None)
+        end_state_index = len(self._states)-1
+        for i, state in enumerate(self._states):
+            if trellis[i][t][0] > max[0]:
+                max = ( trellis[i][t][0], i )
+        # compute probability
+        final_probability = logproduct( max[0], self.transitionProb(max[1],end_state_index) )
+        # retrieve most probable state sequence via backpointers
+        most_probable_state_sequence = [ end_state_index, max[1] ]
+        previous_backpointer = max[1]
+        i = len(observation_sequence)-1
+        while i >= 0:
+            previous_backpointer = trellis[previous_backpointer][i][1]
+            most_probable_state_sequence.append(previous_backpointer)
+            i -= 1
+        return most_probable_state_sequence[::-1], final_probability # [::-1] reverses state sequence
+        
+        
+    

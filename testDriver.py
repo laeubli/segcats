@@ -26,3 +26,5 @@ print myHMM.forwardProbability( test_obs_seq, 1, 'H3' ) # forward probability fo
 print myHMM.backwardProbability( test_obs_seq ) # backward probability of the whole observation sequence (=total observation probability)
 print myHMM.backwardProbability( test_obs_seq, 0 ) # backward probabilities for all states at time 0
 print myHMM.backwardProbability( test_obs_seq, 1, 'H3' ) # backward probability for state H3 at time 1
+
+print myHMM.viterbiProbability( test_obs_seq )
