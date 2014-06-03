@@ -54,3 +54,23 @@ def logproduct ( logprob1, logprob2 ):
         return logprob1 + logprob2
     except TypeError:
         return None # if either logprob1 or logprob2 are None (i.e., minus infinity)
+
+def mean ( observations ):
+    """
+    Calculates the mean of 1..* floats.
+    @param observations (list): list of floats
+    @return (float): the mean of the values in @param observations
+    """
+    return sum(observations) / len(observations)
+
+def variance ( observations ):
+    """
+    Calculates the variance of 1..* floats.
+    @param observations (list): list of floats
+    @return (float): the variance of the values in @param observations
+    """
+    m = mean(observations)
+    nominator = 0.0
+    for observation in observations:
+        nominator += math.pow((observation-m), 2)
+    return nominator / (len(observations)-1)
