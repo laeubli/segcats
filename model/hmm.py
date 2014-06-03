@@ -187,7 +187,7 @@ class HMM:
         except TypeError:
             return None # special case for zero probability
     
-    def forwardTrellis ( self, observation_sequence ):
+    def _forwardTrellis ( self, observation_sequence ):
         """
         Implements the Forward algorithm in log space. Computes the probability of seeing the
         observations in @param observation_sequence from start (time 0) to time t, given that 
@@ -230,7 +230,7 @@ class HMM:
             if state_s != None:
                 sys.exit("Error computing Forward probability: time t must be given when state s is specified.")
         # get Forward probability trellis
-        fp = self.forwardTrellis(observation_sequence)
+        fp = self._forwardTrellis(observation_sequence)
         # return result according to provided parameters
         last_t_index = len(observation_sequence)-1
         end_state_index = len(self._states)-1
@@ -254,7 +254,7 @@ class HMM:
                     if state_s in [0, end_state_index, 'START', 'END']:
                         sys.exit("Error computing Backward probability: START and END states have no Backward probability at time t.") 
     
-    def backwardTrellis ( self, observation_sequence ):
+    def _backwardTrellis ( self, observation_sequence ):
         """
         Implements the Backward algorithm in log space. Computes the probability of seeing the
         observations in @param observation_sequence from start (time 0) to time t, given that 
@@ -305,7 +305,7 @@ class HMM:
             if state_s != None:
                 sys.exit("Error computing Backward probability: time t must be given when state s is specified.")
         # get Forward probability trellis
-        bp = self.backwardTrellis(observation_sequence)
+        bp = self._backwardTrellis(observation_sequence)
         # return according to provided parameters
         if state_s == None:
             if time_t==None:
@@ -374,5 +374,62 @@ class HMM:
             i -= 1
         return most_probable_state_sequence[::-1], final_probability # [::-1] reverses state sequence
         
+    def _reestimateParameters ( self, observation_sequences ):
+        """
+        Updates the transition and observation probabilities for this HMM through one Baum-Welch
+        (EM) training iteration on @param observation_sequences. This process can be iterated
+        until the desired precision is reached.
+        @param observation_sequence: a list of observations to learn the new parameters from,
+            each observation being a list of 1..* feature values (one for each feature of this HMM)
+        @return (TODO): TODO (information gain?)
+        """
+        # EXPECTATION STEP
+        xi = [] # expected transitions
+        gamma = [ [] for f in self._features ] # expected observations for each feature stream
+        for k, observation_sequence in enumerate(observation_sequences):
+            # get forward and backward probabilities for all states and times in observation
+            forward_trellis = self._forwardTrellis(observation_sequence)
+            backward_trellis = self._backwardTrellis(observation_sequence)
+            # compute state occupation and transition probabilities
+            xi.append( self._estimateXi(observation_sequence, forward_trellis, backward_trellis) )
+            for f, feature in enumerate(self._features):
+                gamma[f].append( self._estimateGamma(feature, observation_sequence, forward_trellis, backward_trellis) )
+        # ...
         
+        # MAXIMISATION
     
+    def _estimateXi ( self, observation_sequence, forward_trellis, backward_trellis ):
+        """
+        Estimates the probability of being in state s_i at time t and state s_j at time t+1, 
+        given the current model parameters  and an @param observation_sequence.
+        @param observation_sequence: a list of observations to learn the new parameters from,
+            each observation being a list of 1..* feature values (one for each feature of this HMM)
+        @return (list): A 2-dimensional array containing the probability of being in state s_i at 
+            time t and state s_j at time t+1 for all states in self._states. The probabilities are
+            stored as follows: array[t][i][j] = float.
+        """
+        xi = []
+        for t, observation in enumerate(observation_sequence[:-1]): # only up to T-1 for i and T for j; how to deal with END state?
+            denominator = None
+            xi.append([])
+            for i, state_i in enumerate(self._states):
+                xi[t].append([])
+                for j, state_j in enumerate(self._states):
+                    print forward_trellis[i][t], self.transitionProb(i,j), self.observationProb(j,observation_sequence[t+1]), backward_trellis[j][t+1]
+                    xi_t_i_j = logproduct( forward_trellis[i][t],                              logproduct( \
+                                           self.transitionProb(i,j),                           logproduct( \
+                                           self.observationProb(j,observation_sequence[t+1]),  \
+                                           backward_trellis[j][t+1] ) ) )
+                    print xi_t_i_j
+                    xi[t][i].append( xi_t_i_j )
+                    denominator = logsum( denominator, xi_t_i_j ) # the denominator is the sum of all xi values
+            for i, xi_t_i in enumerate(xi[t]):
+                for j, xi_t_i_j in enumerate(xi_t_i):
+                    xi[t][i][j] = logproduct( xi_t_i_j, -denominator ) # division (normalisation) in log space
+        return xi
+    
+    def _estimateGamma(feature_index, observation_sequence, forward_trellis, backward_trellis):
+        """
+        #TODO
+        """
+        pass
