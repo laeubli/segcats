@@ -185,10 +185,10 @@ class SingleGaussianHMM:
                 alpha = .5
                 alpha_increase_per_Gaussian = .5 / len(means_variances_over_time)
                 # add one Gaussian per training iteration
-                for i, (m, v) in enumerate(means_variances_over_time, 1):
+                for j, (m, v) in enumerate(means_variances_over_time):
                     s = np.sqrt(v)
-                    this_Gaussian_alpha = alpha + i*alpha_increase_per_Gaussian
-                    plt.plot(x,mlab.normpdf(x,m,s), alpha=this_Gaussian_alpha, linewidth=2.0, label="Iteration %s" % i)
+                    this_Gaussian_alpha = alpha + ((j+1)*alpha_increase_per_Gaussian)
+                    plt.plot(x,mlab.normpdf(x,m,s), alpha=this_Gaussian_alpha, linewidth=2.0, label="Iteration %s" % j)
                 # show plot
                 plt.legend()
                 plt.show()
