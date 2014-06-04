@@ -15,7 +15,7 @@ from collections import defaultdict
 
 class SingleGaussianHMM:
     
-    def __init__ ( self, parameter_file=None, states=None, observation_sequences=None, topology='fully_connected' ):
+    def __init__ ( self, parameter_file=None, states=None, observation_sequences=None, initial_observation_probabilities=None, topology='fully_connected', training_iterations=5, verbose=False ):
         """
         Creates and initialises a hidden Markov model. If @param from_file is given,
         all parameters are loaded from file. Otherwise, the parameters are initialised
@@ -25,6 +25,11 @@ class SingleGaussianHMM:
         @param states (list): the hidden states. Must include 'START' and 'END'
         @param observation_sequences (list): 1..* sequences of lists, with each list representing one
             observation as 1..n features (n == len(@param features))
+        @param initial_observation_probabilities (list): a list of (mean,variance) tuples (one float
+            each) to initialise the observation PDFs. The position corresponds to @param states; one
+            (mean,variance) tuple for each state is required. If no initial observation probabilities
+            are provided (@param initial_observation_probabilities=None), the global mean and variance
+            from @param observation_sequences will be estimated and used to initialise each state's PDF
         @param topology: the HMM topology, i.e., how the hidden states are connected; 1 of
             'fully-connected' (ergodic) means that each state is connected to each other state,
                 including itself (self-loop)
@@ -32,11 +37,16 @@ class SingleGaussianHMM:
                 and state n+1 (START and END don't have a self-loop)
             ALTERNATIVELY a transition probability matrix (list of lists) can be provided
                 to define a custom HMM topology.
+        @param training_iterations (int): the number of Baum-Welch training iterations to optimise the
+            model parameters through the @param observation_sequences.
+        @param verbose (bool): whether or not to print information about the model training process to
+            stdout
         """
         self._states = []
         self._features = []
         self._transition_probs = [] # matrix: prob = matrix[from-state_index][to-state_index]
         self._observation_means_variances = [] # matrix: prob = matrix[state] = (mean, variance)
+        self._verbose = verbose
         # model parameters from previous iterations
         self._previous_observation_probs = []
         self._previous_transition_probs = []
@@ -44,6 +54,7 @@ class SingleGaussianHMM:
             # load parameters from file
             self._initialise_from_file(parameter_file)
         else:
+            sys.stdout.write("Initialising model...")
             # initialise states
             if 'START' not in states or 'END' not in states:
                 sys.exit("Cannot construct HMM. States must include both START and END.")
@@ -51,7 +62,13 @@ class SingleGaussianHMM:
             # initialise transition probabilities
             self._init_state_probabilities(topology)
             # initialise features with observation probabilities (uniform)
-            self._init_observation_probabilities (observation_sequences)
+            self._init_observation_probabilities(observation_sequences, initial_observation_probabilities)
+            sys.stdout.write(" Done.\n")
+            # Baum-Welch training
+            for i in range(0,training_iterations):
+                sys.stdout.write("Re-estimating model parameters. Iteration %s of %s...\n" % (i+1, training_iterations))
+                self._reestimateParameters(observation_sequences)
+            print "Parameter estimation completed."
     
     def _init_state_probabilities ( self, topology ):
         """
@@ -62,26 +79,36 @@ class SingleGaussianHMM:
         else:
             self._transition_probs = topology
     
-    def _init_observation_probabilities ( self, observation_sequences ):
+    def _init_observation_probabilities ( self, observation_sequences, initial_observation_probabilities ):
         """
         Initialises the PDF for each state by taking the global mean and variance found in
-        the @param observation_sequences.
+        the @param observation_sequences if no initial means and variacnes are given.
         """
-        # pool all observations out of all observation sequences
-        all_observations = []
-        for observation_sequence in observation_sequences:
-            for observation in observation_sequence:
-                all_observations.append(observation[0]) # single-valued observations only have one feature
-        # calculate global mean and variance
-        global_mean = mean(all_observations)
-        global_variance = variance(all_observations)
-        # add global mean and variance to each state
-        for i, state in enumerate(self._states):
-            if i in [0, len(self._states)-1]:
-                mean_variance = (None, None) # START and END states are non-emitting!
-            else:
-                mean_variance = (global_mean, global_variance)
-            self._observation_means_variances.append( mean_variance )
+        if initial_observation_probabilities:
+            if len(initial_observation_probabilities) != len(self._states):
+                sys.exit("Cannot construct HMM. Exactly one (mean,variance) tuple is needed for each hidden state, including (None, None) for both the END and START state.")
+            if initial_observation_probabilities[0] != (None, None) or initial_observation_probabilities[len(self._states)-1] != (None, None):
+                sys.exit("Cannot construct HMM. The (mean,variance) tuple for the START and END states must be (None,None).")
+            for m, v in initial_observation_probabilities:
+                assert( isinstance(m, float) or m==None)
+                assert( isinstance(v, float) or v==None)
+                self._observation_means_variances.append ( (m,v) )
+        else:
+            # pool all observations out of all observation sequences
+            all_observations = []
+            for observation_sequence in observation_sequences:
+                for observation in observation_sequence:
+                    all_observations.append(observation[0]) # single-valued observations only have one feature
+            # calculate global mean and variance
+            global_mean = mean(all_observations)
+            global_variance = variance(all_observations)
+            # add global mean and variance to each state
+            for i, state in enumerate(self._states):
+                if i in [0, len(self._states)-1]:
+                    mean_variance = (None, None) # START and END states are non-emitting!
+                else:
+                    mean_variance = (global_mean, global_variance)
+                self._observation_means_variances.append( mean_variance )
 
     def _create_transition_matrix ( self, topology ):
         """
@@ -139,6 +166,32 @@ class SingleGaussianHMM:
                         row = i*[zero_prob] + [half_prob,half_prob] + (total_states-2-i)*[zero_prob]
                     matrix.append(row)
         return matrix
+    
+    def visualisePDFHistory ( self ):
+        """
+        Plots the Gaussians for each state learned through the Baum-Welch training iterations.
+        """
+        import matplotlib.pyplot as plt
+        import numpy as np
+        import matplotlib.mlab as mlab
+        
+        for i, state in enumerate(self._states):
+            if state not in ['START','END']:
+                means_variances_over_time = [ mv[i] for mv in self._previous_observation_probs ] # previous
+                means_variances_over_time.append( self._observation_means_variances[i] ) # current
+                # prepare plot
+                x = np.linspace(0,2500,100) #TODO: adjust viewport automatically
+                plt.ylim([0, 0.006])
+                alpha = .5
+                alpha_increase_per_Gaussian = .5 / len(means_variances_over_time)
+                # add one Gaussian per training iteration
+                for i, (m, v) in enumerate(means_variances_over_time, 1):
+                    s = np.sqrt(v)
+                    this_Gaussian_alpha = alpha + i*alpha_increase_per_Gaussian
+                    plt.plot(x,mlab.normpdf(x,m,s), alpha=this_Gaussian_alpha, linewidth=2.0, label="Iteration %s" % i)
+                # show plot
+                plt.legend()
+                plt.show()
     
     def transitionProb ( self, from_state, to_state ):
         """
@@ -399,9 +452,7 @@ class SingleGaussianHMM:
             stored as follows: array[t][i][j] = float.
         """
         xi = []
-        print forward_trellis[4]
-        sys.exit(0)
-        for t, observation in enumerate(observation_sequence[:-1]): # only up to T-1 for i and T for j; how to deal with END state?
+        for t, observation in enumerate(observation_sequence[:-1]): # for all time steps t up to T-1
             denominator = None
             xi.append([])
             for i, state_i in enumerate(self._states):
@@ -415,7 +466,19 @@ class SingleGaussianHMM:
                     denominator = logsum( denominator, xi_t_i_j ) # the denominator is the sum of all xi values
             for i, xi_t_i in enumerate(xi[t]):
                 for j, xi_t_i_j in enumerate(xi_t_i):
-                    xi[t][i][j] = logproduct( xi_t_i_j, -denominator ) # division (normalisation) in log space
+                    xi[t][i][j] = logproduct( xi_t_i_j, -denominator ) if denominator else None # division (normalisation) in log space
+        # for last time step T
+        xi.append([]) # for last time step T
+        last_time_step = len(observation_sequence)-1 # index of last time step T
+        end_state = len(self._states)-1 # index of END state
+        for i, state_i in enumerate(self._states):
+            xi[last_time_step].append([]) # for i
+            for j, state_j in enumerate(self._states):
+                if j == end_state:
+                    xi_t_i_j = self.transitionProb(i,j)
+                else:
+                    xi_t_i_j = None
+                xi[last_time_step][i].append(xi_t_i_j)
         return xi
     
     def _estimateGamma ( self, observation_sequence, forward_trellis, backward_trellis ):
@@ -440,7 +503,7 @@ class SingleGaussianHMM:
                 gamma[t].append( gamma_t_i )
                 denominator = logsum( denominator, gamma_t_i ) # the denominator is the sum of all gamma values
             for i, gamma_t in enumerate(gamma[t]):
-                gamma[t][i] = logproduct( gamma_t, -denominator ) # division (normalisation) in log space
+                gamma[t][i] = logproduct( gamma_t, -denominator ) if denominator else None # division (normalisation) in log space
         return gamma
     
     def _reestimateTransitionProbs ( self, observation_sequences, xi, gamma ):
@@ -466,7 +529,7 @@ class SingleGaussianHMM:
                 k_prob = 1 / self.forwardProbability(observation_sequence) # EV. TODO: Only until T, not END (as long as END state probs are not fixed)
                 xi_sum = None
                 gamma_sum = None
-                for t, observation in enumerate(observation_sequence[:-1]):
+                for t, observation in enumerate(observation_sequence):
                     xi_sum =    logsum( xi_sum, xi[k][t][state_from][state_to] )
                     gamma_sum = logsum( gamma_sum, gamma[k][t][state_from] )
                 numerator =   logsum ( numerator, logproduct( k_prob, xi_sum ) )
@@ -476,13 +539,30 @@ class SingleGaussianHMM:
                 return None # -None raises a TypeError and cannot be handled by shared.logproduct()
             else:
                 return logproduct( numerator, -denominator )
-        # iterate over all possible state transitions
+        # iterate over all possible state transitions, except those from START
         new_transition_probs = []
         for i, state_i in enumerate(self._states):
             new_transition_probs.append([])
             for j, state_j in enumerate(self._states):
                 new_transition_probs[i].append( reestimateTransitionProb(i,j) )
-                print "%s -> %s %s" % (state_i, state_j, new_transition_probs[i][j]) 
+        # add state transition probabilitites from START to any state j
+        for j, state_j in enumerate(self._states):
+            numerator = None
+            denominator = None
+            for k, observation_sequence in enumerate(observation_sequences):
+                k_prob = self.forwardProbability(observation_sequence)
+                numerator = logsum( numerator, logproduct( k_prob, gamma[k][1][j] ) )
+                denominator = logsum( denominator, k_prob )
+            new_transition_probs[0][j] = logproduct( numerator, -denominator ) if denominator else None
+        # print new transition probabilitites:
+        if self._verbose:
+            print 'New transition probabilities:'
+            for i, state_i in enumerate(self._states):
+                for j, state_j in enumerate(self._states):
+                    print "\t%s -> %s %s" % (state_i, state_j, new_transition_probs[i][j])
+        # swap old and new transition probabilities
+        self._previous_transition_probs.append( self._transition_probs )
+        self._transition_probs = new_transition_probs
                 
     
     def _reestimateObservationProbs ( self, observation_sequences, gamma ):
@@ -500,6 +580,8 @@ class SingleGaussianHMM:
             @param state (int): the state's index
             @return (tuple): the new mean (float) and variance (float) for @param state
             """
+            if state in [0, len(self._states)-1]: 
+                return (None, None) # for START and END states are non-emitting
             numerator_mean = None
             numerator_variance = None
             denominator = None
@@ -510,25 +592,29 @@ class SingleGaussianHMM:
                 denominator_sum = None
                 for t, observation in enumerate(observation_sequence[:-1]):
                     gamma_k_t_i = gamma[k][t][i]
-                    current_mean_i = self._observation_means_variances[i][0]
+                    current_mean_i = self._observation_means_variances[i][0] 
                     numerator_mean_sum =     logsum( numerator_mean_sum, logproduct( gamma_k_t_i, log(observation[0]) ) )
                     numerator_variance_sum = logsum( numerator_variance_sum, logproduct( gamma_k_t_i, log(math.pow((observation[0]-current_mean_i),2)) ) )
                     denominator_sum =        logsum( denominator_sum, gamma_k_t_i )
-                numerator_mean =      logsum ( numerator_mean, logproduct( k_prob, numerator_mean_sum ) )
-                numerator_variance =  logsum ( numerator_variance, logproduct( k_prob, numerator_variance_sum ) )
-                denominator =         logsum ( denominator, logproduct( k_prob, denominator_sum ) )
+                numerator_mean =      logsum( numerator_mean, logproduct( k_prob, numerator_mean_sum ) )
+                numerator_variance =  logsum( numerator_variance, logproduct( k_prob, numerator_variance_sum ) )
+                denominator =         logsum( denominator, logproduct( k_prob, denominator_sum ) )
             if denominator == None:
                 #print "Zero-probability for new transition probability from %s to %s" % (state_from, state_to)
                 return None # -None raises a TypeError and cannot be handled by shared.logproduct()
             else:
-                log_mean = logproduct( numerator_mean, -denominator )
-                log_variance = logproduct( numerator_variance, -denominator ) 
+                log_mean = logproduct( numerator_mean, -denominator ) if denominator else None
+                log_variance = logproduct( numerator_variance, -denominator ) if denominator else None
                 return exp(log_mean), exp(log_variance)
         # iterate over all states
+        if self._verbose:
+            print "New observation probabilities:"
         new_observation_means_variances = []
         for i, state in enumerate(self._states):
             new_observation_means_variances.append( reestimateMeanVariance(i) )
-            print new_observation_means_variances[i]
-            #print "%s: mean=%s, variance=%s" % (state, new_observation_means_variances[i][0], new_observation_means_variances[i][1])
-            
+            if self._verbose:
+                print "\t%s: mean=%s, variance=%s" % (state, new_observation_means_variances[i][0], new_observation_means_variances[i][1])
+        # swap old and new observation probabilities
+        self._previous_observation_probs.append( self._observation_means_variances )
+        self._observation_means_variances = new_observation_means_variances
         
