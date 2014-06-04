@@ -16,10 +16,13 @@ states = ['START', 'H1', 'H2', 'H3', 'END']
 features, observations = fileIO.readObservations('test_data/observations/exampleSingleGaussianFixationDuration/P/P01_P11.xml.obs')
 
 myHMM = model.SingleGaussianHMM(states=states, observation_sequences=observations, topology='fully-connected')
-#print myHMM._transition_probs
+print myHMM._transition_probs
 print myHMM._observation_means_variances
 #print myHMM.transitionProb(0,2)
-#print myHMM.observationProb(2, 260.0)
+print myHMM.observationProb(0, 260.0) # should be None (non-emitting)
+print myHMM.observationProb(1, 260.0)
+print myHMM.observationProb(4, 260.0) # should be None (non-emitting)
+sys.exit()
 
 test_obs_seq = [ [31.0], [100.0], [200.0], ]
 

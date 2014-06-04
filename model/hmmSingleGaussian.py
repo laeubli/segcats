@@ -76,8 +76,12 @@ class SingleGaussianHMM:
         global_mean = mean(all_observations)
         global_variance = variance(all_observations)
         # add global mean and variance to each state
-        for state in self._states:
-            self._observation_means_variances.append( (global_mean, global_variance) )
+        for i, state in enumerate(self._states):
+            if i in [0, len(self._states)-1]:
+                mean_variance = (None, None) # START and END states are non-emitting!
+            else:
+                mean_variance = (global_mean, global_variance)
+            self._observation_means_variances.append( mean_variance )
 
     def _create_transition_matrix ( self, topology ):
         """
@@ -150,7 +154,7 @@ class SingleGaussianHMM:
                 from_state = self._transition_probs.index(from_state)
             if isinstance(to_state, str):
                 from_state = self._transition_probs.index(to_state)
-            return self.transtitionProb(from_state, to_state)
+            return self.transitionProb(from_state, to_state)
     
     def observationProb ( self, state, observation ):
         """
@@ -164,6 +168,8 @@ class SingleGaussianHMM:
         assert(isinstance(observation, float))
         try:
             mean, variance = self._observation_means_variances[state]
+            if mean == None:
+                return None # for non-emitting states
             stdev = math.sqrt(variance)
             # normal distribution (single Gaussian)
             prob = ( 1 / (stdev * math.sqrt(2*math.pi)) ) * math.exp(-( ( math.pow((observation-mean),2) / (2*variance) ) ))
@@ -393,6 +399,8 @@ class SingleGaussianHMM:
             stored as follows: array[t][i][j] = float.
         """
         xi = []
+        print forward_trellis[4]
+        sys.exit(0)
         for t, observation in enumerate(observation_sequence[:-1]): # only up to T-1 for i and T for j; how to deal with END state?
             denominator = None
             xi.append([])
