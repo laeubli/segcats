@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified"
+    targetNamespace="https://github.com/laeubli/segcats/fileIO/xsd/hmm"
+    xmlns="https://github.com/laeubli/segcats/fileIO/xsd/hmm">
+    <xs:element name="HMM">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="startState" type="startState"/>
+                <xs:choice maxOccurs="unbounded">
+                    <xs:element name="state" type="emittingState"/>
+                </xs:choice>
+                <xs:element name="endState" type="endState"/>
+            </xs:sequence>
+            <xs:attribute name="states" type="xs:positiveInteger" use="required"/>
+            <xs:attribute name="features" type="xs:positiveInteger" use="required"/>
+            <xs:attribute name="type" type="xs:string" use="optional"/>
+            <xs:attribute name="note" type="xs:string"/>
+        </xs:complexType>
+    </xs:element>
+    <xs:complexType name="emittingState">
+        <xs:all>
+            <xs:element name="transitions" type="transitions"/>
+            <xs:element name="observations">
+                <xs:complexType>
+                    <xs:choice maxOccurs="unbounded">
+                        <xs:element name="discreteFeature" type="discreteFeature"/>
+                        <xs:element name="continuousFeature" type="continuousFeature"/>
+                    </xs:choice>
+                </xs:complexType>
+            </xs:element>
+        </xs:all>
+        <xs:attribute name="name" type="stateName" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="startState">
+        <xs:all>
+            <xs:element name="transitions" type="transitions"/>
+        </xs:all>
+        <xs:attribute fixed="START" name="name" type="stateName" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="endState">
+        <xs:attribute fixed="END" name="name" type="stateName" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="transitions">
+        <xs:choice maxOccurs="unbounded" minOccurs="1">
+            <xs:element name="transition">
+                <xs:complexType>
+                    <xs:attribute name="to" type="stateName" use="required"/>
+                    <xs:attribute name="probability" type="probability" use="required"/>
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="discreteFeature">
+        <xs:choice maxOccurs="unbounded">
+            <xs:element name="symbol">
+                <xs:complexType>
+                    <xs:attribute name="probability" type="probability" use="required"/>
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+    <xs:complexType name="continuousFeature">
+        <xs:choice>
+            <xs:element name="Gaussian">
+                <xs:complexType>
+                    <xs:attribute name="mean" type="xs:float" use="required"/>
+                    <xs:attribute name="variance" type="xs:float" use="required"/>
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="Weibull">
+                <xs:complexType>
+                    <xs:attribute name="shape" type="xs:float" use="required"/>
+                    <xs:attribute name="scale" type="xs:float" use="required"/>
+                </xs:complexType>
+            </xs:element>
+        </xs:choice>
+    </xs:complexType>
+    <xs:simpleType name="stateName">
+        <xs:restriction base="xs:string"/>
+    </xs:simpleType>
+    <xs:simpleType name="probability">
+        <xs:annotation>
+            <xs:documentation>All probabilities are natural logarithms; a zero probability (minus infinity in log space) is denoted as "None".</xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string"/>
+    </xs:simpleType>
+</xs:schema>
