@@ -203,21 +203,23 @@ class SingleGaussianHMM:
                 means_variances_over_time.append( self._observation_means_variances[i] ) # current
                 # prepare plot
                 x = np.linspace(0,xmax, 500)
-                alpha = 0.2
-                alpha_increase_per_Gaussian = 0.8 / len(means_variances_over_time)
                 # add one Gaussian per training iteration
                 for j, (m, v) in enumerate(means_variances_over_time):
                     s = np.sqrt(v)
-                    this_Gaussian_alpha = alpha + ((j+1)*alpha_increase_per_Gaussian)
-                    # only label the last value for each state
+                    # only label the last value for each state, and other conditional formatting
                     if j == len(means_variances_over_time)-1:
                         label = state
                         linewidth = 2.5
+                        linestyle = 'solid'
                     else:
                         label = None
                         linewidth = 1.0
+                        if j == 0:
+                            linestyle = 'solid'
+                        else:
+                            linestyle = 'dotted'
                     # add Gaussian
-                    plt.plot(x,mlab.normpdf(x,m,s), 'r-', alpha=this_Gaussian_alpha, color=color_palette[color_index], linewidth=linewidth, label=label)
+                    plt.plot(x,mlab.normpdf(x,m,s), 'r-', color=color_palette[color_index], linewidth=linewidth, linestyle=linestyle, label=label)
                 # make sure the next state gets another color (up to 8)
                 color_index = (color_index + 1) % 7
         # format the plot
