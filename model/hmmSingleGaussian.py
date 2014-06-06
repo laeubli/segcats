@@ -202,7 +202,7 @@ class SingleGaussianHMM:
                 means_variances_over_time = [ mv[i] for mv in self._previous_observation_probs ] # previous
                 means_variances_over_time.append( self._observation_means_variances[i] ) # current
                 # prepare plot
-                x = np.linspace(0,xmax,500) #TODO: adjust viewport automatically
+                x = np.linspace(0,xmax, 500)
                 alpha = 0.2
                 alpha_increase_per_Gaussian = 0.8 / len(means_variances_over_time)
                 # add one Gaussian per training iteration
