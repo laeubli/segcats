@@ -11,6 +11,7 @@ from __future__ import division
 
 import sys, math, pdf
 from shared import *
+from fileIO import *
 from collections import defaultdict
 
 class SingleGaussianHMM:
@@ -52,7 +53,12 @@ class SingleGaussianHMM:
         self._previous_transition_probs = []
         if parameter_file != None:
             # load parameters from file
-            self._initialise_from_file(parameter_file)
+            sys.stdout.write("Loading model from %s..." % parameter_file)
+            parameter_reader = SingleGaussianHMM_XMLReader(parameter_file)
+            self._states = parameter_reader.getStates()
+            self._transition_probs = parameter_reader.getTransitionProbabilities()
+            self._observation_means_variances = parameter_reader.getMeansVariances()
+            sys.stdout.write(" Done.\n")
         else:
             sys.stdout.write("Initialising model...")
             # initialise states
@@ -617,4 +623,19 @@ class SingleGaussianHMM:
         # swap old and new observation probabilities
         self._previous_observation_probs.append( self._observation_means_variances )
         self._observation_means_variances = new_observation_means_variances
-        
+    
+    def save ( self, path, comment=None, type='XML' ):
+        """
+        Saves this model to file.
+        @param path (str): the target path of the model file, e.g., "~/models/model.xml"
+        @param comment (str): a short comment to be included, e.g., to describe the purpose 
+            of this model 
+        @param type (str): the file format. Currently, the following formats are supported:
+            "XML": save the model according to the schema definition in /fileIO/xsd/hmm
+        """
+        if type == "XML":
+            serialiser = SingleGaussianHMM_XMLSerialiser( self._states, self._observation_means_variances, self._transition_probs, comment )
+            with open(path, 'w') as file:
+                file.write( serialiser.getXML() )
+        else:
+            sys.stderr.write('Error saving model: Cannot save model in "%s" format; this format is not supported.' % type)

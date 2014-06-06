@@ -29,7 +29,6 @@ def exp( prob ):
         return math.exp( prob )
     except TypeError:
         return 0.0 # special case for minus infinity
-    
 
 def logsum ( logprob1, logprob2 ):
     """

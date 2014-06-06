@@ -1,0 +1,50 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<HMM xmlns="https://github.com/laeubli/segcats/fileIO/xsd/hmm" states="5" features="1" type="SingleGaussianHMM">
+  <startState name="START">
+    <transitions>
+      <transition to="H1" probability="-0.32623072395654162392020225524902"/>
+      <transition to="H2" probability="-1.31394103010461549274623394012451"/>
+      <transition to="H3" probability="-4.64572648144894628785550594329834"/>
+    </transitions>
+  </startState>
+  <state name="H1">
+    <transitions>
+      <transition to="H1" probability="-0.62546123926789309876994593651034"/>
+      <transition to="H2" probability="-0.98243636495656172513690762571059"/>
+      <transition to="H3" probability="-2.40292409530031481068590437644161"/>
+      <transition to="END" probability="-38.44905127544141265616417513228953"/>
+    </transitions>
+    <observations>
+      <continuousFeature>
+        <Gaussian mean="102.73386831537654018120520049706101" variance="5835.36269096580690529663115739822388"/>
+      </continuousFeature>
+    </observations>
+  </state>
+  <state name="H2">
+    <transitions>
+      <transition to="H1" probability="-0.72742422312887100588341127149761"/>
+      <transition to="H2" probability="-0.94689475418315538490787730552256"/>
+      <transition to="H3" probability="-2.04938457375846638797156629152596"/>
+      <transition to="END" probability="-37.84318883694545831986033590510488"/>
+    </transitions>
+    <observations>
+      <continuousFeature>
+        <Gaussian mean="241.48631338921165934152668341994286" variance="29737.97080067148999660275876522064209"/>
+      </continuousFeature>
+    </observations>
+  </state>
+  <state name="H3">
+    <transitions>
+      <transition to="H1" probability="-0.94770221043538338534517606603913"/>
+      <transition to="H2" probability="-1.02338798879427450572165980702266"/>
+      <transition to="H3" probability="-1.38008457262907580087585301953368"/>
+      <transition to="END" probability="-31.76217673315281686541311501059681"/>
+    </transitions>
+    <observations>
+      <continuousFeature>
+        <Gaussian mean="938.88119490389362908899784088134766" variance="378804.48690872779116034507751464843750"/>
+      </continuousFeature>
+    </observations>
+  </state>
+  <endState name="END"/>
+</HMM>

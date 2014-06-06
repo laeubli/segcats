@@ -27,6 +27,9 @@ myHMM = model.SingleGaussianHMM(
                         verbose=True 
                         )
 
+# save model
+myHMM.save('test_model.xml')
+
 myHMM.visualisePDFHistory()
 
 print
@@ -64,6 +67,29 @@ print myHMM.backwardProbability( test_obs_seq, 1, 'H3' ) # backward probability 
 print "\nViterbi tests"
 print myHMM.viterbiProbability( test_obs_seq )
 
-# BAUM-WELCH
-#print "\nBaum-Welch tests"
-#myHMM._reestimateParameters( observations )
+
+###
+# Load saved model and see if probabilitites computed using the loaded model are the same
+myLoadedHMM = model.SingleGaussianHMM('test_model.xml')
+all_tests_successful = True
+# test Forward probability
+if myHMM.forwardProbability(test_obs_seq)  != myLoadedHMM.forwardProbability(test_obs_seq):
+    print "Warning: Saving and loading models affects Forward probability."
+    print "Forward probability in original model: %s" % myHMM.forwardProbability(test_obs_seq)
+    print "Forward probability in loaded model:   %s" % myLoadedHMM.forwardProbability(test_obs_seq)
+    all_tests_successful = False
+# test Backward probability
+if myHMM.backwardProbability(test_obs_seq)  != myLoadedHMM.backwardProbability(test_obs_seq):
+    print "Warning: Saving and loading models affects Forward probability."
+    print "Backward probability in original model: %s" % myHMM.backwardProbability(test_obs_seq)
+    print "Backward probability in loaded model:   %s" % myLoadedHMM.backwardProbability(test_obs_seq)
+    all_tests_successful = False
+# test Viterbi probability
+if myHMM.viterbiProbability(test_obs_seq)  != myLoadedHMM.viterbiProbability(test_obs_seq):
+    print "Warning: Saving and loading models affects Forward probability."
+    print "Viterbi probability in original model: %s" % myHMM.viterbiProbability(test_obs_seq)[1]
+    print "Viterbi probability in loaded model:   %s" % myLoadedHMM.viterbiProbability(test_obs_seq)[1]
+    all_tests_successful = False
+# check if all tests were successful
+if all_tests_successful:
+    print "Tests passed: Saving to and loading SingleGaussianHMMs from XML do not affect Forward, Backward, and Viterbi probabilities."
