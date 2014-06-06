@@ -173,31 +173,60 @@ class SingleGaussianHMM:
                     matrix.append(row)
         return matrix
     
-    def visualisePDFHistory ( self ):
+    def visualisePDFHistory ( self, filepath = None ):
         """
-        Plots the Gaussians for each state learned through the Baum-Welch training iterations.
+        Plots the Gaussians for each state learned through the Baum-Welch training iterations
+        in a single figure. If a @param filepath is provided, the figure will be saved to that
+        file; it will show up as a popup window otherwise.
+        @param filepath: includes the name of the file, ending in either .pdf or .png.
         """
         import matplotlib.pyplot as plt
         import numpy as np
         import matplotlib.mlab as mlab
-        
+        # define colors for state Gaussians
+        color_palette = ['#30374F', '#D6AA26', '#91204D', '#BD2A33', '#93A31C', '#6F5846', '#408156', '#373B44']
+        color_index = 0
+        # find limit for X axis (from highest mean of current parameters)
+        state_with_highest_mean = 1
+        highest_mean = 0.0
+        corresponding_variance = 0.0        
+        for i, state in enumerate(self._states[1:-1], 1):
+            if self._observation_means_variances[i][0] > highest_mean:
+                highest_mean = self._observation_means_variances[i][0]
+                corresponding_variance = self._observation_means_variances[i][1]
+        xmax = highest_mean + math.sqrt(corresponding_variance)*2
+        print state_with_highest_mean, highest_mean, corresponding_variance
+        # plot Gaussians for each state
         for i, state in enumerate(self._states):
             if state not in ['START','END']:
                 means_variances_over_time = [ mv[i] for mv in self._previous_observation_probs ] # previous
                 means_variances_over_time.append( self._observation_means_variances[i] ) # current
                 # prepare plot
-                x = np.linspace(0,2500,100) #TODO: adjust viewport automatically
-                plt.ylim([0, 0.006])
-                alpha = .5
-                alpha_increase_per_Gaussian = .5 / len(means_variances_over_time)
+                x = np.linspace(0,xmax,500) #TODO: adjust viewport automatically
+                alpha = 0.2
+                alpha_increase_per_Gaussian = 0.8 / len(means_variances_over_time)
                 # add one Gaussian per training iteration
                 for j, (m, v) in enumerate(means_variances_over_time):
                     s = np.sqrt(v)
                     this_Gaussian_alpha = alpha + ((j+1)*alpha_increase_per_Gaussian)
-                    plt.plot(x,mlab.normpdf(x,m,s), alpha=this_Gaussian_alpha, linewidth=2.0, label="Iteration %s" % j)
-                # show plot
-                plt.legend()
-                plt.show()
+                    # only label the last value for each state
+                    if j == len(means_variances_over_time)-1:
+                        label = state
+                        linewidth = 2.5
+                    else:
+                        label = None
+                        linewidth = 1.0
+                    # add Gaussian
+                    plt.plot(x,mlab.normpdf(x,m,s), 'r-', alpha=this_Gaussian_alpha, color=color_palette[color_index], linewidth=linewidth, label=label)
+                # make sure the next state gets another color (up to 8)
+                color_index = (color_index + 1) % 7
+        # format the plot
+        plt.legend() # include legend
+        if filepath:
+            plt.savefig(filepath)
+        else:
+            # show plot in popup window
+            plt.show()
     
     def transitionProb ( self, from_state, to_state ):
         """
