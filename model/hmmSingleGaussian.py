@@ -47,10 +47,12 @@ class SingleGaussianHMM:
         self._features = []
         self._transition_probs = [] # matrix: prob = matrix[from-state_index][to-state_index]
         self._observation_means_variances = [] # matrix: prob = matrix[state] = (mean, variance)
+        self._total_log_likelihood = 0.0 # the total log likelihood of all observation sequences given the current model parameters
         self._verbose = verbose
         # model parameters from previous iterations
         self._previous_observation_probs = []
         self._previous_transition_probs = []
+        self._previous_total_log_likelihood = []
         if parameter_file != None:
             # load parameters from file
             sys.stdout.write("Loading model from %s..." % parameter_file)
@@ -70,10 +72,20 @@ class SingleGaussianHMM:
             # initialise features with observation probabilities (uniform)
             self._init_observation_probabilities(observation_sequences, initial_observation_probabilities)
             sys.stdout.write(" Done.\n")
+            # calculate total log likelihood of all observations given initial parameters
+            self._total_log_likelihood = 0.0
+            for k, observation_sequence in enumerate(observation_sequences):
+                self._total_log_likelihood = logproduct( self._total_log_likelihood, self.forwardProbability(observation_sequence) )
             # Baum-Welch training
             for i in range(0,training_iterations):
-                sys.stdout.write("Re-estimating model parameters. Iteration %s of %s...\n" % (i+1, training_iterations))
-                self._reestimateParameters(observation_sequences)
+                sys.stdout.write("Re-estimating model parameters. Iteration %s of %s..." % (i+1, training_iterations))
+                total_log_likelihood_given_new_model = self._reestimateParameters(observation_sequences)
+                # compute difference in previous and current total log likelihood
+                change = ((total_log_likelihood_given_new_model / self._total_log_likelihood) - 1) * 100
+                # save new total log likelihood
+                self._previous_total_log_likelihood.append(self._total_log_likelihood)
+                self._total_log_likelihood = total_log_likelihood_given_new_model
+                sys.stdout.write("Done. Total log likelihood = %s (%.2f %%)\n" % (total_log_likelihood_given_new_model, change))
             print "Parameter estimation completed."
     
     def _init_state_probabilities ( self, topology ):
@@ -462,7 +474,8 @@ class SingleGaussianHMM:
         until the desired precision is reached.
         @param observation_sequence: a list of observations to learn the new parameters from,
             each observation being a list of 1..* feature values (one for each feature of this HMM)
-        @return (TODO): TODO (information gain?)
+        @return (float): the log likelihood of all observations K = k1..n given this HMM, i.e., 
+            sum(log p(k_n)) for all k in K.
         """
         # EXPECTATION STEP
         xi = [] # expected transitions at time t from state j to i
@@ -477,6 +490,11 @@ class SingleGaussianHMM:
         # MAXIMISATION
         self._reestimateTransitionProbs(observation_sequences, xi, gamma)
         self._reestimateObservationProbs(observation_sequences, gamma)
+        # return total log likelihood of all observation sequence given the new model parameters
+        total_log_likelihood = 0.0
+        for k, observation_sequence in enumerate(observation_sequences):
+            total_log_likelihood = logproduct( total_log_likelihood, self.forwardProbability(observation_sequence) )
+        return total_log_likelihood
     
     def _estimateXi ( self, observation_sequence, forward_trellis, backward_trellis ):
         """
@@ -599,8 +617,7 @@ class SingleGaussianHMM:
                     print "\t%s -> %s %s" % (state_i, state_j, new_transition_probs[i][j])
         # swap old and new transition probabilities
         self._previous_transition_probs.append( self._transition_probs )
-        self._transition_probs = new_transition_probs
-                
+        self._transition_probs = new_transition_probs 
     
     def _reestimateObservationProbs ( self, observation_sequences, gamma ):
         """
