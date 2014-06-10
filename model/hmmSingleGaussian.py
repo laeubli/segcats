@@ -196,7 +196,7 @@ class SingleGaussianHMM:
         import numpy as np
         import matplotlib.mlab as mlab
         # define colors for state Gaussians
-        color_palette = ['#30374F', '#D6AA26', '#91204D', '#BD2A33', '#93A31C', '#6F5846', '#408156', '#373B44']
+        color_palette = ['#588199', '#D6AA26', '#91204D', '#93A31C', '#6F5846', '#408156', '#30374F'];
         color_index = 0
         # find limit for X axis (from highest mean of current parameters)
         state_with_highest_mean = 1
@@ -232,8 +232,8 @@ class SingleGaussianHMM:
                             linestyle = 'dotted'
                     # add Gaussian
                     plt.plot(x,mlab.normpdf(x,m,s), 'r-', color=color_palette[color_index], linewidth=linewidth, linestyle=linestyle, label=label)
-                # make sure the next state gets another color (up to 8)
-                color_index = (color_index + 1) % 7
+                # make sure the next state gets another color (up to 7)
+                color_index = (color_index + 1) % 6
         # format the plot
         plt.legend() # include legend
         if filepath:

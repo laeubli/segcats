@@ -15,8 +15,8 @@ initial_obs_probs = [ (None,None),   (100.0, 131134.0), (250.0,131134.0),   (100
 
 
 #features, observations = fileIO.readObservations('example.obs')
-#features, observations = fileIO.readObservations('test_data/observations/exampleSingleGaussianFixationDuration/P/*.obs')
-features, observations = fileIO.readObservations('test_data/observations/exampleSingleGaussianFixationDuration/P/P01_P11.xml.obs')
+features, observations = fileIO.readObservations('test_data/observations/exampleSingleGaussianFixationDuration/P/*.obs')
+#features, observations = fileIO.readObservations('test_data/observations/exampleSingleGaussianFixationDuration/P/P01_P11.xml.obs')
 
 myHMM = model.SingleGaussianHMM(
                         states=states, 
