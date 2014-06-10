@@ -6,7 +6,7 @@ All XML schema definitions are stored in the /fileIO/xsd
 """
 import sys, os
 from fileIOHelpers import *
-from lxml import etree
+from lxml import etree  # @UnresolvedImport
 
 XML_NAMESPACE = 'https://github.com/laeubli/segcats/fileIO/xsd/hmm'
 

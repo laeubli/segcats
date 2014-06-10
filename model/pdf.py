@@ -34,7 +34,7 @@ class AbstractFeature(object):
         try:
             return self._states.index(state)
         except:
-            sys.exit("Error: Observation %s was never seen in training." % observation)
+            sys.exit('Error: State "%s" is undefined in this model' % state)
     
     def getStates ( self ):
         return self._states
