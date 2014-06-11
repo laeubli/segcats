@@ -7,6 +7,15 @@ Mann's tutorial “Numerically Stable Hidden Markov Model Implementation”.
 """
 
 import math
+import numpy as np
+
+def toFloat ( numeral ):
+    """
+    Converts a number @param numeral in any representation to the currently
+    used float data type in segcats. This allows to switch between datatypes
+    with varying precision.
+    """
+    return np.float64(numeral)
 
 def log( prob ):
     """
