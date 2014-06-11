@@ -83,7 +83,7 @@ def mean ( observations ):
     @param observations (list): list of floats
     @return (float): the mean of the values in @param observations
     """
-    return sum(observations) / len(observations)
+    return toFloat( sum(observations) / len(observations) )
 
 def variance ( observations ):
     """
@@ -95,4 +95,4 @@ def variance ( observations ):
     nominator = 0.0
     for observation in observations:
         nominator += math.pow((observation-m), 2)
-    return nominator / (len(observations)-1)
+    return toFloat( nominator / (len(observations)-1) )
