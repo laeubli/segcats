@@ -185,12 +185,13 @@ class SingleGaussianHMM:
                     matrix.append(row)
         return matrix
     
-    def visualisePDFHistory ( self, filepath = None ):
+    def visualisePDFHistory ( self, filepath = None, xmax=None ):
         """
         Plots the Gaussians for each state learned through the Baum-Welch training iterations
         in a single figure. If a @param filepath is provided, the figure will be saved to that
         file; it will show up as a popup window otherwise.
         @param filepath: includes the name of the file, ending in either .pdf or .png.
+            Note: filepath must be absolute; ~/Desktop/abc.pdf or similar won't work.
         """
         import matplotlib.pyplot as plt
         import numpy as np
@@ -206,7 +207,8 @@ class SingleGaussianHMM:
             if self._observation_means_variances[i][0] > highest_mean:
                 highest_mean = self._observation_means_variances[i][0]
                 corresponding_variance = self._observation_means_variances[i][1]
-        xmax = highest_mean + math.sqrt(corresponding_variance)*2
+        if not xmax:
+            xmax = highest_mean + math.sqrt(corresponding_variance)
         print state_with_highest_mean, highest_mean, corresponding_variance
         # plot Gaussians for each state
         for i, state in enumerate(self._states):
@@ -236,6 +238,8 @@ class SingleGaussianHMM:
                 color_index = (color_index + 1) % 6
         # format the plot
         plt.legend() # include legend
+        plt.xlabel('Observed Value')
+        plt.ylabel('Probability of Observed Value')
         if filepath:
             plt.savefig(filepath)
         else:

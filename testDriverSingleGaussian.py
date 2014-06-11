@@ -15,22 +15,22 @@ initial_obs_probs = [ (None,None),   (100.0, 131134.0), (250.0,131134.0),   (100
 
 
 #features, observations = fileIO.readObservations('example.obs')
-features, observations = fileIO.readObservations('test_data/observations/exampleSingleGaussianFixationDuration/P/*.obs')
-#features, observations = fileIO.readObservations('test_data/observations/exampleSingleGaussianFixationDuration/P/P01_P11.xml.obs')
+#features, observations = fileIO.readObservations('test_data/observations/exampleSingleGaussianFixationDuration/P/*.obs')
+features, observations = fileIO.readObservations('test_data/observations/exampleSingleGaussianFixationDuration/P/P01_P11.xml.obs')
 
 myHMM = model.SingleGaussianHMM(
                         states=states, 
                         observation_sequences=observations, 
                         initial_observation_probabilities=initial_obs_probs, 
                         topology='fully-connected', 
-                        training_iterations=5, 
-                        verbose=True
+                        training_iterations=1, 
+                        verbose=False
                         )
 
 # save model
 myHMM.save('test_model.xml')
 
-myHMM.visualisePDFHistory()
+myHMM.visualisePDFHistory('/Users/sam/Desktop/hist.pdf')
 
 print
 print
