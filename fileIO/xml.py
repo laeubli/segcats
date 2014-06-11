@@ -5,7 +5,7 @@ Provides classes for writing HMMs to and reading HMMs from XML files.
 All XML schema definitions are stored in the /fileIO/xsd
 """
 import sys, os
-from fileIOHelpers import *
+from shared import *
 from lxml import etree  # @UnresolvedImport
 
 XML_NAMESPACE = 'https://github.com/laeubli/segcats/fileIO/xsd/hmm'
@@ -91,7 +91,7 @@ class AbstractXMLSerialiser ( object ):
             transitions_node = etree.SubElement(state_node, self._ns + "transitions")
             for to_state_index, transition_probability in enumerate(self._transition_probabilities[from_state_index]):
                 if transition_probability != None:
-                    transition_probability = float_to_str(transition_probability)
+                    transition_probability = floatToStr(transition_probability)
                     transition_node = etree.SubElement(transitions_node, self._ns + "transition")
                     transition_node.attrib['to'] = self._states[to_state_index]
                     transition_node.attrib['probability'] = transition_probability
@@ -164,8 +164,8 @@ class SingleGaussianHMM_XMLSerialiser ( AbstractXMLSerialiser ):
             continuousFeature_node = etree.SubElement(observations_node, self._ns + "continuousFeature")
             # add Gaussian with mean and variance to <continuousFeature>
             mean, variance = self._means_variances[from_state_index]
-            mean = float_to_str(mean)
-            variance = float_to_str(variance)
+            mean = floatToStr(mean)
+            variance = floatToStr(variance)
             Gaussian_node = etree.SubElement(continuousFeature_node, self._ns + "Gaussian")
             Gaussian_node.attrib['mean'] = mean
             Gaussian_node.attrib['variance'] = variance
@@ -289,7 +289,7 @@ class AbstractXMLReader ( object ):
                 to_state_index = self._states.index(to_state_name)
                 probability = transition_node.get('probability')
                 # add transition probability to matrix
-                transition_probabilities[from_state_index][to_state_index] = float(probability)
+                transition_probabilities[from_state_index][to_state_index] = toFloat(probability)
         self._transition_probabilities = transition_probabilities
             
             
@@ -349,5 +349,5 @@ class SingleGaussianHMM_XMLReader ( AbstractXMLReader ):
                     mean = gaussian_node.get('mean')
                     variance = gaussian_node.get('variance')    
                     # add mean and variance to the respective vector
-                    means_variances[state_index] = ( float(mean), float(variance) )
+                    means_variances[state_index] = ( toFloat(mean), toFloat(variance) )
         self._means_variances = means_variances
