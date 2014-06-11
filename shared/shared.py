@@ -6,7 +6,6 @@ Note: log(), exp(), logsum(), and logproduct() closely follow Tobias P.
 Mann's tutorial “Numerically Stable Hidden Markov Model Implementation”.
 """
 
-import math
 import numpy as np
 
 def floatType ():
@@ -38,7 +37,7 @@ def log( prob ):
     model this value as None in this framework.
     """
     try:
-        return math.log(prob)
+        return np.log(prob)
     except ValueError:
         return None # special case for 0
 
@@ -49,7 +48,7 @@ def exp( prob ):
     we return 0 in this case.
     """
     try:
-        return math.exp( prob )
+        return np.exp( prob )
     except TypeError:
         return 0.0 # special case for minus infinity
 
@@ -64,9 +63,9 @@ def logsum ( logprob1, logprob2 ):
             return logprob1
     else:
         if logprob1 > logprob2:
-            return logprob1 + log( 1 + math.exp(logprob2-logprob1) )
+            return logprob1 + log( 1 + np.exp(logprob2-logprob1) )
         else:
-            return logprob2 + log( 1 + math.exp(logprob1-logprob2) )
+            return logprob2 + log( 1 + np.exp(logprob1-logprob2) )
 
 def logproduct ( logprob1, logprob2 ):
     """
@@ -94,5 +93,5 @@ def variance ( observations ):
     m = mean(observations)
     nominator = 0.0
     for observation in observations:
-        nominator += math.pow((observation-m), 2)
+        nominator += np.power((observation-m), 2)
     return toFloat( nominator / (len(observations)-1) )

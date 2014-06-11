@@ -9,10 +9,11 @@ IMPORTANT: All probabilities are natural logarithms
 
 from __future__ import division
 
-import sys, math, pdf
+import sys
+import numpy as np
 from shared import *
 from fileIO import *
-from collections import defaultdict
+from shared.shared import toFloat
 
 class SingleGaussianHMM:
     
@@ -47,7 +48,7 @@ class SingleGaussianHMM:
         self._features = []
         self._transition_probs = [] # matrix: prob = matrix[from-state_index][to-state_index]
         self._observation_means_variances = [] # matrix: prob = matrix[state] = (mean, variance)
-        self._total_log_likelihood = 0.0 # the total log likelihood of all observation sequences given the current model parameters
+        self._total_log_likelihood = toFloat(0.0) # the total log likelihood of all observation sequences given the current model parameters
         self._verbose = verbose
         # model parameters from previous iterations
         self._previous_observation_probs = []
@@ -73,7 +74,7 @@ class SingleGaussianHMM:
             self._init_observation_probabilities(observation_sequences, initial_observation_probabilities)
             sys.stdout.write(" Done.\n")
             # calculate total log likelihood of all observations given initial parameters
-            self._total_log_likelihood = 0.0
+            self._total_log_likelihood = toFloat(0.0)
             for k, observation_sequence in enumerate(observation_sequences):
                 self._total_log_likelihood = logproduct( self._total_log_likelihood, self.forwardProbability(observation_sequence) )
             # Baum-Welch training
@@ -108,8 +109,16 @@ class SingleGaussianHMM:
             if initial_observation_probabilities[0] != (None, None) or initial_observation_probabilities[len(self._states)-1] != (None, None):
                 sys.exit("Cannot construct HMM. The (mean,variance) tuple for the START and END states must be (None,None).")
             for m, v in initial_observation_probabilities:
-                assert( isinstance(m, float) or m==None)
-                assert( isinstance(v, float) or v==None)
+                if not isinstance(m, floatType()) or m==None:
+                    if isinstance(m, float):
+                        m = toFloat(m)
+                    else:
+                        sys.exit("Cannot construct HMM. Invalid data type for initial mean.")
+                if not isinstance(v, floatType()) or v==None:
+                    if isinstance(v, float):
+                        v = toFloat(v)
+                    else:
+                        sys.exit("Cannot construct HMM. Invalid data type for initial variance.")
                 self._observation_means_variances.append ( (m,v) )
         else:
             # pool all observations out of all observation sequences
@@ -147,9 +156,9 @@ class SingleGaussianHMM:
             if topology == 'fully-connected': # aka ergodic
                 # calculate uniform probabilities
                 total_states = len(self._states) # including START and END
-                prob_from_start = log( 1 / (total_states - 2) ) # as a START has no self transition and no transition to END
-                prob_from_any = log( 1 / (total_states - 1) ) # no transition back to START
-                zero_prob = log(0) # special value (None)
+                prob_from_start = log( toFloat( 1 / (total_states - 2) ) ) # as a START has no self transition and no transition to END
+                prob_from_any = log( toFloat( 1 / (total_states - 1) ) ) # no transition back to START
+                zero_prob = log( toFloat(0) ) # special value (None)
                 # initialise matrix
                 for state in self._states:
                     row = []
@@ -172,9 +181,9 @@ class SingleGaussianHMM:
                 assert(self._states[0] == 'START')
                 assert(self._states[-1] == 'END')
                 total_states = len(self._states) # including START and END
-                full_prob = log(1.0)
-                half_prob = log(0.5)
-                zero_prob = log(0) # special value (None)
+                full_prob = log( toFloat(1.0) )
+                half_prob = log( toFloat(0.5) )
+                zero_prob = log( toFloat(0) ) # special value (None)
                 for i, state in enumerate(self._states):
                     if i == 0:
                         row = [zero_prob, full_prob] + (total_states-2)*[zero_prob] # probabilities from START
@@ -194,7 +203,6 @@ class SingleGaussianHMM:
             Note: filepath must be absolute; ~/Desktop/abc.pdf or similar won't work.
         """
         import matplotlib.pyplot as plt
-        import numpy as np
         import matplotlib.mlab as mlab
         # define colors for state Gaussians
         color_palette = ['#588199', '#D6AA26', '#91204D', '#93A31C', '#6F5846', '#408156', '#30374F'];
@@ -208,7 +216,7 @@ class SingleGaussianHMM:
                 highest_mean = self._observation_means_variances[i][0]
                 corresponding_variance = self._observation_means_variances[i][1]
         if not xmax:
-            xmax = highest_mean + math.sqrt(corresponding_variance)
+            xmax = highest_mean + np.sqrt(corresponding_variance)
         print state_with_highest_mean, highest_mean, corresponding_variance
         # plot Gaussians for each state
         for i, state in enumerate(self._states):
@@ -276,9 +284,9 @@ class SingleGaussianHMM:
             mean, variance = self._observation_means_variances[state]
             if mean == None:
                 return None # for non-emitting states
-            stdev = math.sqrt(variance)
+            stdev = np.sqrt(variance)
             # normal distribution (single Gaussian)
-            prob = ( 1 / (stdev * math.sqrt(2*math.pi)) ) * math.exp(-( ( math.pow((observation-mean),2) / (2*variance) ) ))
+            prob = ( 1 / (stdev * np.sqrt(2*np.pi)) ) * np.exp(-( ( np.power((observation-mean),2) / (2*variance) ) ))
             return log(prob)
         except TypeError:
             # if state name rather than state index is provided
@@ -326,6 +334,9 @@ class SingleGaussianHMM:
         if time_t == None:
             if state_s != None:
                 sys.exit("Error computing Forward probability: time t must be given when state s is specified.")
+        # check if first observation has correct float type
+        if not isinstance(observation_sequence[0][0], floatType()):
+            sys.stderr.write('Warning: Depreceated float type used in observation sequence. Convert all floats x via toFloat(x) to prevent numerical underflow.')
         # get Forward probability trellis
         fp = self._forwardTrellis(observation_sequence)
         # return result according to provided parameters
@@ -401,6 +412,9 @@ class SingleGaussianHMM:
         if time_t == None:
             if state_s != None:
                 sys.exit("Error computing Backward probability: time t must be given when state s is specified.")
+        # check if first observation has correct float type
+        if not isinstance(observation_sequence[0][0], floatType()):
+            sys.stderr.write('Warning: Depreceated float type used in observation sequence. Convert all floats x via toFloat(x) to prevent numerical underflow.')
         # get Forward probability trellis
         bp = self._backwardTrellis(observation_sequence)
         # return according to provided parameters
@@ -435,6 +449,9 @@ class SingleGaussianHMM:
         @return (tuple): the most probable state sequence, encoded as a list of indices
             corresponding to self._states, as well as its score (log probability).
         """
+        # check if first observation has correct float type
+        if not isinstance(observation_sequence[0][0], floatType()):
+            sys.stderr.write('Warning: Depreceated float type used in observation sequence. Convert all floats x via toFloat(x) to prevent numerical underflow.')
         # initialise trellis
         trellis = [] # trellis[state][time] = (viterbi_prob, backpointer)
         for i, state in enumerate(self._states):
@@ -652,7 +669,7 @@ class SingleGaussianHMM:
                     gamma_k_t_i = gamma[k][t][i]
                     current_mean_i = self._observation_means_variances[i][0] 
                     numerator_mean_sum =     logsum( numerator_mean_sum, logproduct( gamma_k_t_i, log(observation[0]) ) )
-                    numerator_variance_sum = logsum( numerator_variance_sum, logproduct( gamma_k_t_i, log(math.pow((observation[0]-current_mean_i),2)) ) )
+                    numerator_variance_sum = logsum( numerator_variance_sum, logproduct( gamma_k_t_i, log(np.power((observation[0]-current_mean_i),2)) ) )
                     denominator_sum =        logsum( denominator_sum, gamma_k_t_i )
                 numerator_mean =      logsum( numerator_mean, logproduct( k_prob, numerator_mean_sum ) )
                 numerator_variance =  logsum( numerator_variance, logproduct( k_prob, numerator_variance_sum ) )

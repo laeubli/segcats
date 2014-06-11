@@ -9,6 +9,7 @@ from __future__ import division
 from lxml import etree  # @UnresolvedImport
 
 from adaptors.observation import * # imports the Observation class
+from shared import toFloat
 
 '''
 Converts a TranslogII-style XML document into an observation sequence to be used for
@@ -107,7 +108,7 @@ class XMLAdaptorSingleEventA ( AbstractXMLAdaptor ):
         start = int( node.get('time') )
         duration = int( node.get('duration') )
         end = start + duration
-        self._observations.append( Observation(start=start, end=end, value=[float(duration)]) )
+        self._observations.append( Observation(start=start, end=end, value=[toFloat(duration)]) )
 
 
 class XMLAdaptorSingleEventB ( AbstractXMLAdaptor ):
@@ -140,7 +141,7 @@ class XMLAdaptorSingleEventB ( AbstractXMLAdaptor ):
                     end = start + duration
                 except: #if this event type has no duration
                     end = start
-                self._observations.append( Observation(start=start, end=end, value=[float(delay)]) )
+                self._observations.append( Observation(start=start, end=end, value=[toFloat(delay)]) )
             self._start_timestamp_of_previous_event = start
         elif node.tag == 'startSession':
             self._start_timestamp_of_previous_event = None # restart after session break
@@ -175,7 +176,7 @@ class XMLAdaptorSingleEventC ( AbstractXMLAdaptor ):
         if node.tag == self._event_type:
             # get attributes of current event
             start = int( node.get('time') )
-            duration = float( node.get('duration') )
+            duration = toFloat( node.get('duration') )
             end = start + duration
             # add observations, including empty observations for the time that has passed since the last event was recorded
             # add empty observations for time that has passed bevore this event
@@ -190,7 +191,7 @@ class XMLAdaptorSingleEventC ( AbstractXMLAdaptor ):
             else:
                 # duration falls into multiple windows, so split it
                 duration_for_current_window = (self._observations[-1].getStart() + self._window_length) - start
-                self._observations[-1].setValue( [ self._observations[-1].getValue()[0] + float(duration_for_current_window) ] )
+                self._observations[-1].setValue( [ self._observations[-1].getValue()[0] + toFloat(duration_for_current_window) ] )
                 # duration that falls into subsequent windows
                 duration_for_subsequent_windows = (start + duration) - (self._observations[-1].getStart() + self._window_length)
                 while  duration_for_subsequent_windows > self._window_length:
@@ -198,13 +199,13 @@ class XMLAdaptorSingleEventC ( AbstractXMLAdaptor ):
                     new_obs_start = self._observations[-1].getStart() + self._window_length
                     new_obs_end = new_obs_start + self._window_length
                     new_obs_duration = self._window_length
-                    self._observations.append( Observation(start=new_obs_start, end=new_obs_end, value=[float(new_obs_duration)]) )
+                    self._observations.append( Observation(start=new_obs_start, end=new_obs_end, value=[toFloat(new_obs_duration)]) )
                     duration_for_subsequent_windows -= self._window_length
                 # the window in which the current event's end falls into
                 new_obs_start = self._observations[-1].getStart() + self._window_length
                 new_obs_end = new_obs_start + self._window_length
                 new_obs_duration = duration_for_subsequent_windows
-                self._observations.append( Observation(start=new_obs_start, end=new_obs_end, value=[float(new_obs_duration)]) )
+                self._observations.append( Observation(start=new_obs_start, end=new_obs_end, value=[toFloat(new_obs_duration)]) )
         elif node.tag == 'startSession':
             self._session_start = int( node.get('time') )
             self._observations.append( Observation(start=self._session_start, end=self._session_start+self._window_length, value=[0.0]) ) # this is the first observation of the session

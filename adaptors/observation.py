@@ -4,6 +4,8 @@
 # Statistical Modelling of Human Trnaslation Processes
 # Author: Samuel Läubli (slaubli@inf.ed.ac.uk)
 
+from shared import toFloat
+
 class Observation ( object ):
     '''
     A simple class that holds the start timestamp, end timestamp, and the observed value
@@ -39,6 +41,10 @@ class Observation ( object ):
         even if there is only one feature.
         '''
         assert isinstance(value, list)
+        # make sure we use the correct data type for floats
+        for i, feature_value in value:
+            if isinstance(feature_value, float):
+                value[i] = toFloat(i)
         self._value = value
     
     # getters
