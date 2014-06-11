@@ -109,12 +109,12 @@ class SingleGaussianHMM:
             if initial_observation_probabilities[0] != (None, None) or initial_observation_probabilities[len(self._states)-1] != (None, None):
                 sys.exit("Cannot construct HMM. The (mean,variance) tuple for the START and END states must be (None,None).")
             for m, v in initial_observation_probabilities:
-                if not isinstance(m, floatType()) or m==None:
+                if not (isinstance(m, floatType()) or m==None):
                     if isinstance(m, float):
                         m = toFloat(m)
                     else:
                         sys.exit("Cannot construct HMM. Invalid data type for initial mean.")
-                if not isinstance(v, floatType()) or v==None:
+                if not (isinstance(v, floatType()) or v==None):
                     if isinstance(v, float):
                         v = toFloat(v)
                     else:
