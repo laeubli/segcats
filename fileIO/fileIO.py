@@ -4,6 +4,7 @@
 Provides file input/output functionality.
 """
 import sys, glob
+from shared import toFloat
 
 def readObservations ( path ):
     """
@@ -52,7 +53,7 @@ def readObservations ( path ):
                             if features[i] == 'D':
                                 observation.append(str(value)) # force conversion to string for discrete feature values
                             else:
-                                observation.append(float(value)) # force conversion to float for continuous feature values (Gaussian, Weibull)
+                                observation.append(toFloat(value)) # force conversion to float for continuous feature values (Gaussian, Weibull)
                         observation_sequence.append(observation)
                     line_number +=1
         observation_sequences.append(observation_sequence)
