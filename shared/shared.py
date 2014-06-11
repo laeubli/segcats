@@ -9,13 +9,20 @@ Mann's tutorial “Numerically Stable Hidden Markov Model Implementation”.
 import math
 import numpy as np
 
+def floatType ():
+    """
+    Defines the currently used float data type used in all modules.
+    Usage for assertions: isinstance(x, floatType())
+    """
+    return np.float64
+
 def toFloat ( numeral ):
     """
     Converts a number @param numeral in any representation to the currently
     used float data type in segcats. This allows to switch between datatypes
     with varying precision.
     """
-    return np.float64(numeral)
+    return floatType()(numeral)
 
 def floatToStr ( float_nr ):
     """
