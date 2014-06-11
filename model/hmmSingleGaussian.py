@@ -11,6 +11,7 @@ from __future__ import division
 
 import sys
 import numpy as np
+np.seterr(all='raise')
 from shared import *
 from fileIO import *
 from shared.shared import toFloat
@@ -158,7 +159,7 @@ class SingleGaussianHMM:
                 total_states = len(self._states) # including START and END
                 prob_from_start = log( toFloat( 1 / (total_states - 2) ) ) # as a START has no self transition and no transition to END
                 prob_from_any = log( toFloat( 1 / (total_states - 1) ) ) # no transition back to START
-                zero_prob = log( toFloat(0) ) # special value (None)
+                zero_prob = None # special value (None)
                 # initialise matrix
                 for state in self._states:
                     row = []
@@ -183,7 +184,7 @@ class SingleGaussianHMM:
                 total_states = len(self._states) # including START and END
                 full_prob = log( toFloat(1.0) )
                 half_prob = log( toFloat(0.5) )
-                zero_prob = log( toFloat(0) ) # special value (None)
+                zero_prob = None # special value (None)
                 for i, state in enumerate(self._states):
                     if i == 0:
                         row = [zero_prob, full_prob] + (total_states-2)*[zero_prob] # probabilities from START
@@ -336,7 +337,7 @@ class SingleGaussianHMM:
                 sys.exit("Error computing Forward probability: time t must be given when state s is specified.")
         # check if first observation has correct float type
         if not isinstance(observation_sequence[0][0], floatType()):
-            sys.stderr.write('Warning: Depreceated float type used in observation sequence. Convert all floats x via toFloat(x) to prevent numerical underflow.')
+            sys.stderr.write('Warning: Depreciated float type used in observation sequence. Convert all floats x via toFloat(x) to prevent numerical underflow.\n')
         # get Forward probability trellis
         fp = self._forwardTrellis(observation_sequence)
         # return result according to provided parameters
@@ -414,7 +415,7 @@ class SingleGaussianHMM:
                 sys.exit("Error computing Backward probability: time t must be given when state s is specified.")
         # check if first observation has correct float type
         if not isinstance(observation_sequence[0][0], floatType()):
-            sys.stderr.write('Warning: Depreceated float type used in observation sequence. Convert all floats x via toFloat(x) to prevent numerical underflow.')
+            sys.stderr.write('Warning: Depreciated float type used in observation sequence. Convert all floats x via toFloat(x) to prevent numerical underflow.\n')
         # get Forward probability trellis
         bp = self._backwardTrellis(observation_sequence)
         # return according to provided parameters
@@ -451,7 +452,7 @@ class SingleGaussianHMM:
         """
         # check if first observation has correct float type
         if not isinstance(observation_sequence[0][0], floatType()):
-            sys.stderr.write('Warning: Depreceated float type used in observation sequence. Convert all floats x via toFloat(x) to prevent numerical underflow.')
+            sys.stderr.write('Warning: Depreciated float type used in observation sequence. Convert all floats x via toFloat(x) to prevent numerical underflow.\n')
         # initialise trellis
         trellis = [] # trellis[state][time] = (viterbi_prob, backpointer)
         for i, state in enumerate(self._states):
@@ -666,6 +667,7 @@ class SingleGaussianHMM:
                 numerator_variance_sum = None
                 denominator_sum = None
                 for t, observation in enumerate(observation_sequence[:-1]):
+                    print t, observation
                     gamma_k_t_i = gamma[k][t][i]
                     current_mean_i = self._observation_means_variances[i][0] 
                     numerator_mean_sum =     logsum( numerator_mean_sum, logproduct( gamma_k_t_i, log(observation[0]) ) )

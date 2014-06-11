@@ -38,7 +38,7 @@ def log( prob ):
     """
     try:
         return np.log(prob)
-    except ValueError:
+    except FloatingPointError:
         return None # special case for 0
 
 def exp( prob ):
@@ -49,7 +49,7 @@ def exp( prob ):
     """
     try:
         return np.exp( prob )
-    except TypeError:
+    except AttributeError:
         return 0.0 # special case for minus infinity
 
 def logsum ( logprob1, logprob2 ):

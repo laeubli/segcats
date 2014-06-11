@@ -24,7 +24,7 @@ myHMM = model.SingleGaussianHMM(
                         initial_observation_probabilities=initial_obs_probs, 
                         topology='fully-connected', 
                         training_iterations=1, 
-                        verbose=False
+                        verbose=True
                         )
 
 # save model
