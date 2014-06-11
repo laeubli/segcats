@@ -42,9 +42,9 @@ class Observation ( object ):
         '''
         assert isinstance(value, list)
         # make sure we use the correct data type for floats
-        for i, feature_value in value:
+        for i, feature_value in enumerate(value):
             if isinstance(feature_value, float):
-                value[i] = toFloat(i)
+                value[i] = toFloat(value[i])
         self._value = value
     
     # getters
