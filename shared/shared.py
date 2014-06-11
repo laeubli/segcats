@@ -17,6 +17,13 @@ def toFloat ( numeral ):
     """
     return np.float64(numeral)
 
+def floatToStr ( float_nr ):
+    """
+    Returns a more precise string representation of @param float_nr (float) than str(float_nr).
+    @return (str): the string representation of @param float_nr
+    """ 
+    return format(float_nr, '.64f')
+
 def log( prob ):
     """
     Converts a normal probability (float) to a log probability (float).
