@@ -205,7 +205,9 @@ class SingleGaussianHMM:
         @param filepath: includes the name of the file, ending in either .pdf or .png.
             Note: filepath must be absolute; ~/Desktop/abc.pdf or similar won't work.
         """
+        import matplotlib
         import matplotlib.pyplot as plt
+        matplotlib.use('Agg')
         import numpy as np
         import matplotlib.mlab as mlab
         # define colors for state Gaussians
