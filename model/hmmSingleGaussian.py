@@ -220,7 +220,7 @@ class SingleGaussianHMM:
                 highest_mean = self._observation_means_variances[i][0]
                 corresponding_variance = self._observation_means_variances[i][1]
         if not xmax:
-            xmax = highest_mean + math.sqrt(corresponding_variance)
+            xmax = highest_mean + math.sqrt(corresponding_variance)*2
         print state_with_highest_mean, highest_mean, corresponding_variance
         # plot Gaussians for each state
         for i, state in enumerate(self._states):
@@ -252,11 +252,13 @@ class SingleGaussianHMM:
         plt.legend() # include legend
         plt.xlabel('Observed Value')
         plt.ylabel('Probability of Observed Value')
+        plt.xlim(0, xmax)
         if filepath:
             plt.savefig(filepath)
         else:
             # show plot in popup window
             plt.show()
+        plt.close()
     
     def transitionProb ( self, from_state, to_state ):
         """
