@@ -3,59 +3,90 @@
 """
 Provides file input/output functionality.
 """
-import sys, glob
+import sys, glob, csv
+from adaptors.observation import *
 
-def readObservations ( path ):
+def serialiseObservationSequence ( observation_sequence, file_path, feature_names ):
     """
-    Reads 1..* observation sequences, one per file. Each observation file consists of:
-        - a definition of the features (D, G, W) in the first line (<tab>-separated)
-        - one observation per line, with its features separated by <tab>
-    Note that all files need to have the same feature definitions.
-    @param path (str): The path to the observation file(s). Accepts wildcards such
+    Encodes an observation sequence as a CSV file and writes it to disk.
+    @param observation_sequence (list): the list of Observation objects to be encoded
+    @param file_path (str): the target file path to store the CSV file at
+    @param feature_names (list): a list of strings to describe each feature value of
+        the observations. The length of each Observation object'ss value must be equal 
+        to the number of names provided. Names must not include 'start', 'end', and/or
+        any duplicates.
+    """
+    # check feature_names:
+    if 'start' in feature_names or 'end' in feature_names:
+        sys.exit("Error saving observation sequence: 'start' and 'end' must not be used as feature names.")
+    if len(feature_names) != len(set(feature_names)):
+        sys.exit("Error saving observation sequence: no feature name can be used twice.")
+    # encode and save observation sequence
+    with open(file_path, 'wb') as f:
+        writer = csv.writer(f, delimiter=',', quotechar='"')
+        # write header
+        header = ['start', 'end'] + feature_names
+        writer.writerow(header)
+        # write observations
+        for observation in observation_sequence:
+            assert isinstance(observation, Observation)
+            start = observation.getStart()
+            end = observation.getEnd()
+            features = observation.getValue()
+            row = [start, end] + features
+            writer.writerow(row)
+        
+def readObservationSequences ( path, features=None ):
+    """
+    Reads 1..* CSV-encoded observation sequences and returns them as a list of 
+    observation sequences.
+    @param file_path (str): The path to the observation file(s). Accepts wildcards such
         as /foo/bar/*.obs.
-    @return (tuple): a (features, observation_sequences) tuple; the values can be
-        handed to the hmm.HMM class to initialise a hidden Markov model.
+    @param features (list): The names of all features (CSV row headers) to be returned.
+        Returns all features (i.e., all rows except for 'start' and 'end') by default.
+    @return (list): A list of observation sequence, where each observation sequence
+        consists of a list of Observation objects.
     """
-    def validateFeature( name ):
-        """
-        Checks if @param name is a valid feature type
-        """
-        if name in ['D','G','W']:
-            return True
-        else:
-            sys.exit("Error reading observation sequences: %s is not a valid feature type." % name)
-            
-    features = []
     observation_sequences = []
-    
     for file_path in glob.glob(path):
-        observation_sequence = []
-        with open(file_path, 'r') as file:
-            line_number = 0
-            for line in file:
-                if line != '' and not line.startswith('#'):
-                    line = line.strip()
-                    line = line.split('#')[0] # discard comments after any hashtag
-                    values = [value.strip() for value in line.split('\t') if value != '']
-                    if line_number == 0:
-                        for feature in values:
-                            validateFeature(feature)
-                        if features == []:
-                            features = values
-                            features_initialised = True
-                        else:
-                            if features != values:
-                                sys.exit("Error reading observation sequences: The feature definition in %s differs from the previously read files." % file_path)
-                    else:
-                        observation = []
-                        for i, value in enumerate(values):
-                            if features[i] == 'D':
-                                observation.append(str(value)) # force conversion to string for discrete feature values
-                            else:
-                                observation.append(float(value)) # force conversion to float for continuous feature values (Gaussian, Weibull)
-                        observation_sequence.append(observation)
-                    line_number +=1
-        observation_sequences.append(observation_sequence)
-    
-    return features, observation_sequences
-                
+        observation_sequences.append( readObservationSequence(file_path, features) )
+    return observation_sequences
+
+def readObservationSequence ( file_path, features=None ):
+    """
+    Reads a single CSV-encoded observation sequence.
+    @param file_path (str): The path to the CSV file
+    @param features (list): The names of all features (CSV row headers) to be returned.
+        Returns all features (i.e., all rows except for 'start' and 'end') by default.
+    @return (list): A list of observations of type Observation
+    """
+    observation_sequence = []
+    with open(file_path, 'rb') as f:
+        reader = csv.reader(f, delimiter=',', quotechar='"')
+        # read header
+        field_names = reader.next()
+        relevant_row_indices = [] # the index and order of the features to be extracted
+        assert 'start' in field_names
+        start_index = field_names.index('start')
+        assert 'end' in field_names
+        end_index = field_names.index('end')
+        try:
+            if features == None:
+                for field_name in field_names:
+                    if field_name not in ['start', 'end']:
+                        relevant_row_indices.append(field_names.index(field_name))
+            else:
+                for feature in features:
+                    relevant_row_indices.append(field_names.index(feature))
+        except ValueError:
+            sys.exit('Error reading observation sequence: Feature "%s" not found in file %s' % (feature, file_path))
+        # read observations
+        for row in reader:
+            start = int( row[start_index] )
+            end = int( row[end_index] )
+            try: # expect floats
+                value = [ float(row[i]) for i in relevant_row_indices ]
+            except ValueError: # but use strings if conversion to float fails (for discrete observations)
+                value = [ row[i] for i in relevant_row_indices ]
+            observation_sequence.append( Observation(start, end, value) )
+    return observation_sequence
