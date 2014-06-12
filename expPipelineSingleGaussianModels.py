@@ -60,7 +60,7 @@ for i in number_of_hidden_states:
     range_ = max_ - min_
     part_width = range_ / (i-1)
     for j in range(0,i):
-        mean = min_ + ( (j*part_width) + (part_width/2) )
+        mean = min_ + (j*part_width) # was: min_ + ( (j*part_width) + (part_width/2) )
         variance = global_variance
         initial_obs_probs.append( (mean, variance) )
     # add start and end observation probabilities (None)
@@ -71,7 +71,7 @@ for i in number_of_hidden_states:
                     observation_sequences=training_sequences, 
                     initial_observation_probabilities=initial_obs_probs, 
                     topology='fully-connected', 
-                    training_iterations=3, 
+                    training_iterations=7, 
                     verbose=True
                     )
     # create a folder to store all results
