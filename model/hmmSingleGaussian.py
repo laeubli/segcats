@@ -71,6 +71,18 @@ class SingleGaussianHMM:
             self._init_state_probabilities(topology)
             # initialise features with observation probabilities (uniform)
             self._init_observation_probabilities(observation_sequences, initial_observation_probabilities)
+            # check for observation sequences with a total probability (Forward/Backward) of 0.0
+            # this happens when the initial observation probabilities are set very inappropriately OR the observation sequence contains at least one extreme outlier
+            valid_observation_sequences = []
+            for k, observation_sequence in enumerate(observation_sequences):
+                if self.forwardProbability(observation_sequence) == None:
+                    sys.stderr.write('Warning: Observation sequence %s is assigned a zero Forward probability and has thus been removed from the training data. This observation sequence is likely to contain an extreme outlier; if many observation sequences are affected, try using better initial PDF estimates (means,variances).\n' % (k+1))
+                else:
+                    valid_observation_sequences.append(observation_sequence)
+            if len(valid_observation_sequences) > 0:
+                observation_sequences = valid_observation_sequences
+            else:
+                sys.exit("Fatal error: The Forward probability of *all* training sequences is zero with the initial transition and observation probabilities provided. Try using more realistic initial probability estimates.")
             sys.stdout.write(" Done.\n")
             # calculate total log likelihood of all observations given initial parameters
             self._total_log_likelihood = 0.0
@@ -272,13 +284,25 @@ class SingleGaussianHMM:
         if isinstance(observation, list):
             observation = observation[0] # since we're dealing with single-featured observations here
         assert(isinstance(observation, float))
+        # define procedure for dealing with zero probabilities; this isn't a problem as long as at least one PDF for each time t in an observation sequence returns a non-zero value
+        def zeroProbability():
+            if self._verbose:
+                    sys.stderr.write('Warning: Zero observation probability for value %s in state %s (mean=%.4f, variance=%.4f).\n' % (observation, self._states[state], mean, variance) )
+            return None
         try:
             mean, variance = self._observation_means_variances[state]
             if mean == None:
                 return None # for non-emitting states
             stdev = math.sqrt(variance)
             # normal distribution (single Gaussian)
-            prob = ( 1 / (stdev * math.sqrt(2*math.pi)) ) * math.exp(-( ( math.pow((observation-mean),2) / (2*variance) ) ))
+            try:
+                prob = ( 1 / (stdev * math.sqrt(2*math.pi)) ) * math.exp(-( ( math.pow((observation-mean),2) / (2*variance) ) ))
+            except OverflowError:
+                return zeroProbability()
+            if prob != 0.0:
+                return log(prob)
+            else:
+                return zeroProbability()
             return log(prob)
         except TypeError:
             # if state name rather than state index is provided
@@ -585,7 +609,10 @@ class SingleGaussianHMM:
             numerator = None
             denominator = None
             for k, observation_sequence in enumerate(observation_sequences):                
-                k_prob = 1 / self.forwardProbability(observation_sequence) # EV. TODO: Only until T, not END (as long as END state probs are not fixed)
+                try:
+                    k_prob = 1 / self.forwardProbability(observation_sequence) # EV. TODO: Only until T, not END (as long as END state probs are not fixed)
+                except TypeError:
+                    sys.exit("Fatal error in HMM training: Observation sequence %s contains at least one observation that is assinged a zero-probability by the PDFs in *all* states." % k)
                 xi_sum = None
                 gamma_sum = None
                 for t, observation in enumerate(observation_sequence):

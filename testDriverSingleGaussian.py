@@ -9,14 +9,17 @@ import sys
 import model, fileIO
 from shared import *
 
-states =            [ 'START',       'H1',              'H2',               'H3',               'END' ]
+states =            [ 'START',       'H1',              'H2',            'END' ]
 #initial_obs_probs = None
-initial_obs_probs = [ (None,None),   (100.0, 131134.0), (250.0,131134.0),   (1000.0,131134.0),  (None,None) ]
+initial_obs_probs = [ (None,None),   (100.0, 40000.0), (200.0,40000.0),  (None,None) ]
 
+observations = [ [ [100.0], [200.0], [100.0] ],
+                 [ [34245382874328.0], [100.0], [120.0]  ],
+                ]
 
 #features, observations = fileIO.readObservations('example.obs')
 #features, observations = fileIO.readObservations('test_data/observations/exampleSingleGaussianFixationDuration/P/*.obs')
-features, observations = fileIO.readObservations('test_data/observations/exampleSingleGaussianFixationDuration/P/P01_P11.xml.obs')
+#features, observations = fileIO.readObservations('test_data/observations/exampleSingleGaussianFixationDuration/P/P01_P11.xml.obs')
 
 myHMM = model.SingleGaussianHMM(
                         states=states, 
@@ -24,7 +27,7 @@ myHMM = model.SingleGaussianHMM(
                         initial_observation_probabilities=initial_obs_probs, 
                         topology='fully-connected', 
                         training_iterations=1, 
-                        verbose=False
+                        verbose=True
                         )
 
 # save model
@@ -42,7 +45,7 @@ print myHMM._observation_means_variances
 print myHMM.transitionProb(0,2)
 print myHMM.observationProb(0, 260.0) # should be None (non-emitting)
 print myHMM.observationProb(1, 260.0)
-print myHMM.observationProb(4, 260.0) # should be None (non-emitting)
+print myHMM.observationProb(states.index('END'), 260.0) # should be None (non-emitting)
 
 test_obs_seq = [ [31.0], [100.0], [200.0], ]
 
