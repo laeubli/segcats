@@ -10,14 +10,12 @@ class Observation ( object ):
     of an observation.
     '''
     
-    def __init__ ( self, start=None, end=None, value=None ):
-        if start:
-            self.setStart(start)
-        if end:
-            self.setEnd(end)
-        if value:
-            self.setValue(value)
-    
+    def __init__ ( self, start=None, end=None, value=None, state=None ):
+        self.setStart(start)
+        self.setEnd(end)
+        self.setValue(value)
+        self.setState(state)
+
     # setters
     def setStart ( self, start ):
         '''
@@ -41,6 +39,13 @@ class Observation ( object ):
         assert isinstance(value, list)
         self._value = value
     
+    def setState ( self, state ):
+        '''
+        @param state: the name of this observation's state
+        '''
+        assert isinstance(state, str)
+        self._state = state
+    
     # getters
     def getStart ( self ):
         return self._start
@@ -50,3 +55,6 @@ class Observation ( object ):
     
     def getValue ( self ):
         return self._value
+
+    def getState ( self ):
+        return self._state
