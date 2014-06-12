@@ -28,7 +28,7 @@ def mkdir_p(path):
 
 # read training observation sequences
 training_sequences = []
-observation_sequences, filenames = readObservationSequences('training_observations/P05*.csv', return_filenames=True)
+observation_sequences, filenames = readObservationSequences('training_observations/*.csv', return_filenames=True)
 original_filenames = []
 # transform and collect all observations in single list (for initial mean/variance estimation)
 all_observation_values = []
