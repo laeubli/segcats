@@ -7,7 +7,7 @@ Global test driver for Single Gaussian HMM
 import sys
 
 import model, fileIO
-from shared import *
+from shared import * 
 
 states =            [ 'START',       'H1',              'H2',            'END' ]
 #initial_obs_probs = None
@@ -26,7 +26,7 @@ myHMM = model.SingleGaussianHMM(
                         observation_sequences=observations, 
                         initial_observation_probabilities=initial_obs_probs, 
                         topology='fully-connected', 
-                        training_iterations=1, 
+                        training_iterations=2, 
                         verbose=True
                         )
 
