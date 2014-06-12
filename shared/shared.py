@@ -73,3 +73,10 @@ def variance ( observations ):
     for observation in observations:
         nominator += math.pow((observation-m), 2)
     return nominator / (len(observations)-1)
+
+def floatToStr ( float_nr ):
+    """
+    Returns a more precise string representation of @param float_nr (float) than str(float_nr).
+    @return (str): the string representation of @param float_nr
+    """ 
+    return format(float_nr, '.32f')
