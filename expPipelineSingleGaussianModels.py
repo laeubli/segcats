@@ -3,6 +3,9 @@
 
 from __future__ import division
 
+import matplotlib as mpl
+mpl.use('PDF') # ensures that plotting PDF densities works in environments where DISPLAY is not set
+
 import sys, os, errno
 from fileIO import readObservationSequences, serialiseObservationSequence
 from shared import mean, variance
