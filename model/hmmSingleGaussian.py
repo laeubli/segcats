@@ -287,7 +287,11 @@ class SingleGaussianHMM:
                 return None # for non-emitting states
             stdev = np.sqrt(variance)
             # normal distribution (single Gaussian)
-            prob = ( 1 / (stdev * np.sqrt(2*np.pi)) ) * np.exp(-( ( np.power((observation-mean),2) / (2*variance) ) ))
+            try:
+                prob = ( 1 / (stdev * np.sqrt(2*np.pi)) ) * np.exp(-( ( np.power((observation-mean),2) / (2*variance) ) ))
+            except FloatingPointError:
+                sys.stderr.write("Warning: Underflow in Gaussian PDF (mean=%.4f, variance=%.4f) with observation %.4f. Returning Zero-Probability for this observation.\n" % (mean, variance, observation) )
+                prob = None
             return log(prob)
         except TypeError:
             # if state name rather than state index is provided
@@ -603,7 +607,10 @@ class SingleGaussianHMM:
             numerator = None
             denominator = None
             for k, observation_sequence in enumerate(observation_sequences):                
-                k_prob = 1 / self.forwardProbability(observation_sequence) # EV. TODO: Only until T, not END (as long as END state probs are not fixed)
+                try:
+                    k_prob = 1 / self.forwardProbability(observation_sequence) # EV. TODO: Only until T, not END (as long as END state probs are not fixed)
+                except TypeError:
+                    sys.exit("Fatal error: Forward probability of observation sequence %s is zero. It is likely that this sequence contains an extreme outlier, which you could try to exclude and then run the model training again.")
                 xi_sum = None
                 gamma_sum = None
                 for t, observation in enumerate(observation_sequence):
@@ -667,7 +674,6 @@ class SingleGaussianHMM:
                 numerator_variance_sum = None
                 denominator_sum = None
                 for t, observation in enumerate(observation_sequence[:-1]):
-                    print t, observation
                     gamma_k_t_i = gamma[k][t][i]
                     current_mean_i = self._observation_means_variances[i][0] 
                     numerator_mean_sum =     logsum( numerator_mean_sum, logproduct( gamma_k_t_i, log(observation[0]) ) )

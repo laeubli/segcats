@@ -38,7 +38,7 @@ def log( prob ):
     """
     try:
         return np.log(prob)
-    except FloatingPointError:
+    except AttributeError:
         return None # special case for 0
 
 def exp( prob ):
