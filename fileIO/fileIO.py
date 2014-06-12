@@ -3,10 +3,10 @@
 """
 Provides file input/output functionality.
 """
-import sys, glob, csv
+import sys, os, glob, csv
 from adaptors.observation import *
 
-def serialiseObservationSequence ( observation_sequence, file_path, feature_names ):
+def serialiseObservationSequence ( observation_sequence, file_path, feature_names, include_state=False ):
     """
     Encodes an observation sequence as a CSV file and writes it to disk.
     @param observation_sequence (list): the list of Observation objects to be encoded
@@ -15,6 +15,8 @@ def serialiseObservationSequence ( observation_sequence, file_path, feature_name
         the observations. The length of each Observation object'ss value must be equal 
         to the number of names provided. Names must not include 'start', 'end', and/or
         any duplicates.
+    @param include_state (bool): If true, the observation's state (ass assigned by a
+        HMM model) will be included.
     """
     # check feature_names:
     if 'start' in feature_names or 'end' in feature_names:
@@ -26,6 +28,8 @@ def serialiseObservationSequence ( observation_sequence, file_path, feature_name
         writer = csv.writer(f, delimiter=',', quotechar='"')
         # write header
         header = ['start', 'end'] + feature_names
+        if include_state:
+            header += ['state']
         writer.writerow(header)
         # write observations
         for observation in observation_sequence:
@@ -34,9 +38,11 @@ def serialiseObservationSequence ( observation_sequence, file_path, feature_name
             end = observation.getEnd()
             features = observation.getValue()
             row = [start, end] + features
+            if include_state:
+                row += [observation.getState()]
             writer.writerow(row)
         
-def readObservationSequences ( path, features=None ):
+def readObservationSequences ( path, features=None, return_filenames=False ):
     """
     Reads 1..* CSV-encoded observation sequences and returns them as a list of 
     observation sequences.
@@ -44,13 +50,21 @@ def readObservationSequences ( path, features=None ):
         as /foo/bar/*.obs.
     @param features (list): The names of all features (CSV row headers) to be returned.
         Returns all features (i.e., all rows except for 'start' and 'end') by default.
+    @param return_filenames (bool): Whether or not to also return a list of the file
+        names of all read-in original files.
     @return (list): A list of observation sequence, where each observation sequence
-        consists of a list of Observation objects.
+        consists of a list of Observation objects; plus the list of file names if
+        @param return_filenames is True.
     """
     observation_sequences = []
+    file_names = []
     for file_path in glob.glob(path):
         observation_sequences.append( readObservationSequence(file_path, features) )
-    return observation_sequences
+        file_names.append( os.path.basename(file_path) )
+    if return_filenames:
+        return observation_sequences, file_names
+    else:
+        return observation_sequences
 
 def readObservationSequence ( file_path, features=None ):
     """
