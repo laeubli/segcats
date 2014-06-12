@@ -21,14 +21,14 @@ class Observation ( object ):
         '''
         @param start: the start timestamp in miliseconds (int)
         '''
-        assert isinstance(start, int)
+        assert isinstance(start, int) or start == None
         self._start = start
     
     def setEnd ( self, end ):
         '''
         @param start: the end timestamp in miliseconds (int)
         '''
-        assert isinstance(end, int)
+        assert isinstance(end, int) or end == None
         self._end = end
     
     def setValue ( self, value ):
@@ -36,14 +36,14 @@ class Observation ( object ):
         The value of an observation must be a list with one item per feature,
         even if there is only one feature.
         '''
-        assert isinstance(value, list)
+        assert isinstance(value, list) or value == None
         self._value = value
     
     def setState ( self, state ):
         '''
         @param state: the name of this observation's state
         '''
-        assert isinstance(state, str)
+        assert isinstance(state, str) or state == None
         self._state = state
     
     # getters
