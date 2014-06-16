@@ -6,6 +6,7 @@
 
 from __future__ import division
 
+import sys
 from lxml import etree  # @UnresolvedImport
 
 from adaptors.observation import * # imports the Observation class
@@ -82,6 +83,7 @@ class AbstractXMLAdaptor ( object ):
         of type Observation.
         '''
         self._observations = [] # Observation objects will be added in self._processNode
+        self._xml_filepath = xml_filepath
         with open(xml_filepath, 'r') as xml_file:
             context = etree.iterparse(xml_file, events=('end',), tag=self._events, recover=True)
             self._fast_iter(context)
@@ -107,6 +109,13 @@ class XMLAdaptorSingleEventA ( AbstractXMLAdaptor ):
         start = int( node.get('time') )
         duration = int( node.get('duration') )
         end = start + duration
+        # check if current event's start time overlaps with previous event's stop time
+        try:
+            if self._observations[-1].getEnd() > start:
+                sys.stderr.write("Warning: Event with ID %s in %s overlaps with previous event.\n" % (node.get('id'), self._xml_filepath) )
+        except IndexError:
+            pass
+        # append new observation
         self._observations.append( Observation(start=start, end=end, value=[float(duration)]) )
 
 
@@ -168,6 +177,7 @@ class XMLAdaptorSingleEventC ( AbstractXMLAdaptor ):
         self._session_start = None
         self._session_stop = None
         self._window_length = window_length
+        self._prev_node_end_timestamp = None # to check for overlapping events
         AbstractXMLAdaptor.__init__ ( self, events=events, parametrisation='window-based', window_length=window_length )
     
     def _processNode ( self, node ):
@@ -177,8 +187,12 @@ class XMLAdaptorSingleEventC ( AbstractXMLAdaptor ):
             start = int( node.get('time') )
             duration = float( node.get('duration') )
             end = start + duration
+            # check if current event's start time overlaps with previous event's stop time
+            if self._prev_node_end_timestamp and self._prev_node_end_timestamp > start:
+                sys.stderr.write("Warning: Event with ID %s in %s overlaps with previous event.\n" % (node.get('id'), self._xml_filepath) )
+            self._prev_node_end_timestamp = end
             # add observations, including empty observations for the time that has passed since the last event was recorded
-            # add empty observations for time that has passed bevore this event
+            # add empty observations for time that has passed before this event
             while start > self._observations[-1].getStart() + self._window_length:
                 new_obs_start = self._observations[-1].getStart() + self._window_length
                 new_obs_end = new_obs_start + self._window_length
@@ -252,7 +266,7 @@ class XMLAdaptorSingleEventD ( AbstractXMLAdaptor ):
             # get attributes of current event
             start = int( node.get('time') )
             # add observations, including empty observations for the time that has passed since the last event was recorded
-            # add empty observations for time that has passed bevore this event
+            # add empty observations for time that has passed before this event
             while start > self._observations[-1].getStart() + self._window_length:
                 new_obs_start = self._observations[-1].getStart() + self._window_length
                 new_obs_end = new_obs_start + self._window_length

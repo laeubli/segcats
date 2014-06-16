@@ -58,7 +58,7 @@ for i in number_of_hidden_states:
     min_ = min(all_observation_values)
     max_ = max(all_observation_values)
     range_ = max_ - min_
-    part_width = range_ / (i-1)
+    part_width = range_ / (i-1) # alternative: range_ / i
     for j in range(0,i):
         mean = min_ + (j*part_width) # was: min_ + ( (j*part_width) + (part_width/2) )
         variance = global_variance

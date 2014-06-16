@@ -8,9 +8,10 @@ import sys
 from xmlAdaptor import *
 from fileIO import serialiseObservationSequence, readObservationSequence
 
-adaptor = XMLAdaptorSingleEventD('fixation')
+adaptor = XMLAdaptorSingleEventC('fixation')
 observation_sequence = adaptor.convert('/Users/sam/Documents/ausbildung/uni/msc_ai/thesis/Data/TPR Raw/CFT13/Translog-II/P01_P11.xml')
-# print
+#observation_sequence = adaptor.convert('test_log.xml')
+
 for observation in observation_sequence:
     print "%s\t%s\t%s" % (observation.getStart(), observation.getEnd(), observation.getValue())
 # serialise

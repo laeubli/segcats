@@ -290,8 +290,8 @@ class SingleGaussianHMM:
         assert(isinstance(observation, float))
         # define procedure for dealing with zero probabilities; this isn't a problem as long as at least one PDF for each time t in an observation sequence returns a non-zero value
         def zeroProbability():
-            if self._verbose:
-                    sys.stderr.write('Warning: Zero observation probability for value %s in state %s (mean=%.4f, variance=%.4f).\n' % (observation, self._states[state], mean, variance) )
+            #if self._verbose:
+                    #sys.stderr.write('Warning: Zero observation probability for value %s in state %s (mean=%.4f, variance=%.4f).\n' % (observation, self._states[state], mean, variance) )
             return None
         try:
             mean, variance = self._observation_means_variances[state]
