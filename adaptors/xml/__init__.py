@@ -1,1 +1,2 @@
-from xmlAdaptorSingleEvent.py import *
+from xmlAdaptorSingleEvent import *
+from xmlAdaptorComplex import *

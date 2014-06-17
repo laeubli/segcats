@@ -98,9 +98,12 @@ def readObservationSequence ( file_path, features=None ):
         for row in reader:
             start = int( row[start_index] )
             end = int( row[end_index] )
-            try: # expect floats
-                value = [ float(row[i]) for i in relevant_row_indices ]
-            except ValueError: # but use strings if conversion to float fails (for discrete observations)
-                value = [ row[i] for i in relevant_row_indices ]
+            value = []
+            for i in relevant_row_indices:
+                try: value.append( int(row[i]) )
+                except ValueError:
+                    try: value.append( float(row[i]) )
+                    except ValueError:
+                        value.append( row[i] ) # as str
             observation_sequence.append( Observation(start, end, value) )
     return observation_sequence
