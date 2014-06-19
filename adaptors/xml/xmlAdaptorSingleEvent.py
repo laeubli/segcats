@@ -6,7 +6,10 @@
 
 from __future__ import division
 
+import sys
+
 from xmlAdaptor import *
+from adaptors.observation import Observation
 
 class XMLAdaptorSingleEventA ( AbstractXMLAdaptor ):
     '''
@@ -29,12 +32,12 @@ class XMLAdaptorSingleEventA ( AbstractXMLAdaptor ):
         end = start + duration
         # check if current event's start time overlaps with previous event's stop time
         try:
-            if self._observations[-1].getEnd() > start:
+            if self._observations.getObservation(-1).getEnd() > start:
                 sys.stderr.write("Warning: Event with ID %s in %s overlaps with previous event.\n" % (node.get('id'), self._xml_filepath) )
         except IndexError:
             pass
         # append new observation
-        self._observations.append( Observation(start=start, end=end, value=[float(duration)]) )
+        self._observations.addObservation( Observation(start=start, end=end, value=[float(duration)]) )
 
 
 class XMLAdaptorSingleEventB ( AbstractXMLAdaptor ):
@@ -67,7 +70,7 @@ class XMLAdaptorSingleEventB ( AbstractXMLAdaptor ):
                     end = start + duration
                 except: #if this event type has no duration
                     end = start
-                self._observations.append( Observation(start=start, end=end, value=[float(delay)]) )
+                self._observations.addObservation( Observation(start=start, end=end, value=[float(delay)]) )
             self._start_timestamp_of_previous_event = start
         elif node.tag == 'startSession':
             self._start_timestamp_of_previous_event = None # restart after session break
@@ -111,49 +114,49 @@ class XMLAdaptorSingleEventC ( AbstractXMLAdaptor ):
             self._prev_node_end_timestamp = end
             # add observations, including empty observations for the time that has passed since the last event was recorded
             # add empty observations for time that has passed before this event
-            while start > self._observations[-1].getStart() + self._window_length:
-                new_obs_start = self._observations[-1].getStart() + self._window_length
+            while start > self._observations.getObservation(-1).getStart() + self._window_length:
+                new_obs_start = self._observations.getObservation(-1).getStart() + self._window_length
                 new_obs_end = new_obs_start + self._window_length
-                self._observations.append( Observation(start=new_obs_start, end=new_obs_end, value=[0.0]) )
+                self._observations.addObservation( Observation(start=new_obs_start, end=new_obs_end, value=[0.0]) )
             # add this event
-            if end < self._observations[-1].getStart() + self._window_length:
+            if end < self._observations.getObservation(-1).getStart() + self._window_length:
                 # entire event falls into this window
-                self._observations[-1].setValue( [ self._observations[-1].getValue()[0] + duration ] )
+                self._observations.getObservation(-1).setValue( [ self._observations.getObservation(-1).getValue()[0] + duration ] )
             else:
                 # duration falls into multiple windows, so split it
-                duration_for_current_window = (self._observations[-1].getStart() + self._window_length) - start
-                self._observations[-1].setValue( [ self._observations[-1].getValue()[0] + float(duration_for_current_window) ] )
+                duration_for_current_window = (self._observations.getObservation(-1).getStart() + self._window_length) - start
+                self._observations.getObservation(-1).setValue( [ self._observations.getObservation(-1).getValue()[0] + float(duration_for_current_window) ] )
                 # duration that falls into subsequent windows
-                duration_for_subsequent_windows = (start + duration) - (self._observations[-1].getStart() + self._window_length)
+                duration_for_subsequent_windows = (start + duration) - (self._observations.getObservation(-1).getStart() + self._window_length)
                 while  duration_for_subsequent_windows > self._window_length:
                     # windows that are fully spanned by the current observation
-                    new_obs_start = self._observations[-1].getStart() + self._window_length
+                    new_obs_start = self._observations.getObservation(-1).getStart() + self._window_length
                     new_obs_end = new_obs_start + self._window_length
                     new_obs_duration = self._window_length
-                    self._observations.append( Observation(start=new_obs_start, end=new_obs_end, value=[float(new_obs_duration)]) )
+                    self._observations.addObservation( Observation(start=new_obs_start, end=new_obs_end, value=[float(new_obs_duration)]) )
                     duration_for_subsequent_windows -= self._window_length
                 # the window in which the current event's end falls into
-                new_obs_start = self._observations[-1].getStart() + self._window_length
+                new_obs_start = self._observations.getObservation(-1).getStart() + self._window_length
                 new_obs_end = new_obs_start + self._window_length
                 new_obs_duration = duration_for_subsequent_windows
-                self._observations.append( Observation(start=new_obs_start, end=new_obs_end, value=[float(new_obs_duration)]) )
+                self._observations.addObservation( Observation(start=new_obs_start, end=new_obs_end, value=[float(new_obs_duration)]) )
         elif node.tag == 'startSession':
             self._session_start = int( node.get('time') )
-            self._observations.append( Observation(start=self._session_start, end=self._session_start+self._window_length, value=[0.0]) ) # this is the first observation of the session
+            self._observations.addObservation( Observation(start=self._session_start, end=self._session_start+self._window_length, value=[0.0]) ) # this is the first observation of the session
         elif node.tag == 'stopSession':
             self._session_stop = int( node.get('time') ) # note: we're only taking the last stopSession event, thus neglecting all pauses inside the session!
-            while self._observations[-1].getEnd() < self._session_stop:
-                new_obs_start = new_obs_start = self._observations[-1].getStart() + self._window_length
+            while self._observations.getObservation(-1).getEnd() < self._session_stop:
+                new_obs_start = new_obs_start = self._observations.getObservation(-1).getStart() + self._window_length
                 new_obs_end = new_obs_start + self._window_length
-                self._observations.append( Observation(start=new_obs_start, end=new_obs_end, value=[0.0]) )
+                self._observations.addObservation( Observation(start=new_obs_start, end=new_obs_end, value=[0.0]) )
             # adjust length of last window if necessary
-            if self._observations[-1].getEnd() >= self._session_stop:
-                self._observations[-1].setEnd(self._session_stop)
+            if self._observations.getObservation(-1).getEnd() >= self._session_stop:
+                self._observations.getObservation(-1).setEnd(self._session_stop)
             else:
                 # append last empty session that fills the gap until the end
-                new_obs_start = new_obs_start = self._observations[-1].getStart() + self._window_length
+                new_obs_start = new_obs_start = self._observations.getObservation(-1).getStart() + self._window_length
                 new_obs_end = self._session_stop
-                self._observations.append( Observation(start=new_obs_start, end=new_obs_end, value=[0.0]) )
+                self._observations.addObservation( Observation(start=new_obs_start, end=new_obs_end, value=[0.0]) )
 
 
 class XMLAdaptorSingleEventD ( AbstractXMLAdaptor ):
@@ -185,26 +188,26 @@ class XMLAdaptorSingleEventD ( AbstractXMLAdaptor ):
             start = int( node.get('time') )
             # add observations, including empty observations for the time that has passed since the last event was recorded
             # add empty observations for time that has passed before this event
-            while start > self._observations[-1].getStart() + self._window_length:
-                new_obs_start = self._observations[-1].getStart() + self._window_length
+            while start > self._observations.getObservation(-1).getStart() + self._window_length:
+                new_obs_start = self._observations.getObservation(-1).getStart() + self._window_length
                 new_obs_end = new_obs_start + self._window_length
-                self._observations.append( Observation(start=new_obs_start, end=new_obs_end, value=[0.0]) )
+                self._observations.addObservation( Observation(start=new_obs_start, end=new_obs_end, value=[0.0]) )
             # add this event
-            self._observations[-1].setValue( [ self._observations[-1].getValue()[0] + 1.0 ] )
+            self._observations.getObservation(-1).setValue( [ self._observations.getObservation(-1).getValue()[0] + 1.0 ] )
         elif node.tag == 'startSession':
             self._session_start = int( node.get('time') )
-            self._observations.append( Observation(start=self._session_start, end=self._session_start+self._window_length, value=[0.0]) ) # this is the first observation of the session
+            self._observations.addObservation( Observation(start=self._session_start, end=self._session_start+self._window_length, value=[0.0]) ) # this is the first observation of the session
         elif node.tag == 'stopSession':
             self._session_stop = int( node.get('time') ) # note: we're only taking the last stopSession event, thus neglecting all pauses inside the session!
-            while self._observations[-1].getEnd() < self._session_stop:
-                new_obs_start = new_obs_start = self._observations[-1].getStart() + self._window_length
+            while self._observations.getObservation(-1).getEnd() < self._session_stop:
+                new_obs_start = new_obs_start = self._observations.getObservation(-1).getStart() + self._window_length
                 new_obs_end = new_obs_start + self._window_length
-                self._observations.append( Observation(start=new_obs_start, end=new_obs_end, value=[0.0]) )
+                self._observations.addObservation( Observation(start=new_obs_start, end=new_obs_end, value=[0.0]) )
             # adjust length of last window if necessary
-            if self._observations[-1].getEnd() >= self._session_stop:
-                self._observations[-1].setEnd(self._session_stop)
+            if self._observations.getObservation(-1).getEnd() >= self._session_stop:
+                self._observations.getObservation(-1).setEnd(self._session_stop)
             else:
                 # append last empty session that fills the gap until the end
-                new_obs_start = new_obs_start = self._observations[-1].getStart() + self._window_length
+                new_obs_start = new_obs_start = self._observations.getObservation(-1).getStart() + self._window_length
                 new_obs_end = self._session_stop
-                self._observations.append( Observation(start=new_obs_start, end=new_obs_end, value=[0.0]) )
+                self._observations.addObservation( Observation(start=new_obs_start, end=new_obs_end, value=[0.0]) )

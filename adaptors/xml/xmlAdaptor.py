@@ -6,10 +6,9 @@
 
 from __future__ import division
 
-import sys
 from lxml import etree  # @UnresolvedImport
 
-from adaptors.observation import * # imports the Observation class
+from adaptors.observationSequence import ObservationSequence
 
 '''
 Converts a TranslogII-style XML document into an observation sequence to be used for
@@ -43,10 +42,10 @@ class AbstractXMLAdaptor ( object ):
         self._events = events
         self._parametrisation = parametrisation
         self._window_length = window_length
-        self._FEATURES = ['value']
+        self._feature_names=['value']
     
     def getFeatures ( self ):
-        return self._FEATURES
+        return self._observations.getFeatureNames()
     
     def _fast_iter ( self, context ):
         '''
@@ -86,7 +85,7 @@ class AbstractXMLAdaptor ( object ):
         Converts an XML file at @param xml_filepath into a list of observations
         of type Observation.
         '''
-        self._observations = [] # Observation objects will be added in self._processNode
+        self._observations = ObservationSequence(feature_names=self._feature_names) # Observation objects will be added in self._processNode
         self._xml_filepath = xml_filepath
         with open(xml_filepath, 'r') as xml_file:
             context = etree.iterparse(xml_file, events=('end',), tag=self._events, recover=True)

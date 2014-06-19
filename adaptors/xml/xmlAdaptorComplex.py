@@ -7,6 +7,7 @@
 from __future__ import division
 
 from xmlAdaptor import *
+from adaptors.observation import Observation
 
 class XMLAdaptorComplexA ( AbstractXMLAdaptor ):
     '''
@@ -37,32 +38,34 @@ class XMLAdaptorComplexA ( AbstractXMLAdaptor ):
         self._DELETE_KEY_CODES = [8, 46] # backspace, delete
         self._NAVIGATION_KEY_CODES = [33, 34, 35, 36, 37, 38, 39, 40] # page up, page down, end, home, left arrow, up arrow, right arrow, down arrow
         # features
-        self._FEATURES = ['keyDownNormal', 'keyDownDel', 'keyDownCtrl', 'keyDownNav']
+        self._feature_names = ['keyDownNormal', 'keyDownDel', 'keyDownCtrl', 'keyDownNav']
     
     def _processNode ( self, node ):
         start = int( node.get('time') )
         end = start
         if node.tag == 'startSession':
             self._time_elapsed = {} # timestamp of most recently seen event per type
-            for feature in self._FEATURES:
+            for feature in self._feature_names:
                 self._time_elapsed[feature] = None
             # this resets the counter for each subsession
         else:
             # set end time of previous event
             if self._add_duration:
-                if len(self._observations) > 0:
-                    self._observations[-1].setEnd(start)
+                try:
+                    self._observations.getObservation(-1).setEnd(start)
+                except IndexError:
+                    pass
             # process current event
             if node.tag == 'keyDown':
                 self._processKeyDown(node)
             # append new observation
             observation = []
-            for feature in self._FEATURES:
+            for feature in self._feature_names:
                 try:
                     observation.append( start - self._time_elapsed[feature] )
                 except TypeError:
-                    observation.append( 'NA' ) # if this feature has not yet been seen
-            self._observations.append( Observation(start=start, end=end, value=observation) )
+                    observation.append( None ) # if this feature has not yet been seen
+            self._observations.addObservation( Observation(start=start, end=end, value=observation) )
         self._prev_event_start_time = start
     
     def _processKeyDown ( self, node ):

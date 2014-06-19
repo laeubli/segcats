@@ -6,8 +6,8 @@
 
 class Observation ( object ):
     '''
-    A simple class that holds the start timestamp, end timestamp, and the observed value
-    of an observation.
+    A simple class that holds the start timestamp, end timestamp, and the observed
+    feature values of an observation.
     '''
     
     def __init__ ( self, start=None, end=None, value=None, state=None ):

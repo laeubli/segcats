@@ -83,7 +83,7 @@ def readObservationSequence ( file_path, features=None ):
     @param file_path (str): The path to the CSV file
     @param features (list): The names of all features (CSV row headers) to be returned.
         Returns all features (i.e., all rows except for 'start' and 'end') by default.
-    @return (list): A list of observations of type Observation
+    @return (tuple): (i) A list of all feature names and (ii) A list of observations of type Observation
     """
     observation_sequence = []
     with open(file_path, 'rb') as f:
@@ -91,6 +91,7 @@ def readObservationSequence ( file_path, features=None ):
         # read header
         field_names = reader.next()
         relevant_row_indices = [] # the index and order of the features to be extracted
+        feature_names = []
         assert 'start' in field_names
         start_index = field_names.index('start')
         assert 'end' in field_names
@@ -100,9 +101,11 @@ def readObservationSequence ( file_path, features=None ):
                 for field_name in field_names:
                     if field_name not in ['start', 'end']:
                         relevant_row_indices.append(field_names.index(field_name))
+                        feature_names.append(field_name)
             else:
                 for feature in features:
                     relevant_row_indices.append(field_names.index(feature))
+                    feature_names.append(feature)
         except ValueError:
             sys.exit('Error reading observation sequence: Feature "%s" not found in file %s' % (feature, file_path))
         # read observations
@@ -115,6 +118,6 @@ def readObservationSequence ( file_path, features=None ):
                 except ValueError:
                     try: value.append( float(row[i]) )
                     except ValueError:
-                        value.append( row[i] ) # as str
+                        value.append( row[i] if row[i] else None ) # as str (but None for 'None')
             observation_sequence.append( Observation(start, end, value) )
-    return observation_sequence
+    return feature_names, observation_sequence
