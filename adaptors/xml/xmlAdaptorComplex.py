@@ -11,15 +11,13 @@ from adaptors.observation import Observation
 
 class XMLAdaptorComplexA ( AbstractXMLAdaptor ):
     '''
-    Event-based extraction from CASMACAT XML. For each of the following events,
-    the time (in milliseconds) passed since each of the other events last occurred
-    is output. The event types are:
+    Event-based extraction from CASMACAT XML. For each of the following events types,
+    the delay to the previous event of each event type (including the event type
+    of the current event itself) is output. The event types are:
         - time since last keyDown alphanumeric, interpunctuation, ...
         - time since last keyDown DEL, BACKSPACE
         - time since last keyDown CTRL, ALT, WIN/MAC
-        - time since last keyDown arrow (left, right, up, down)        
-    This means that each observation of type T will have a zero ms delay for T
-    and a delay of X ms for all other event types.
+        - time since last keyDown arrow (left, right, up, down)
     '''
     
     def __init__ ( self, add_duration=False ):
@@ -55,16 +53,16 @@ class XMLAdaptorComplexA ( AbstractXMLAdaptor ):
                     self._observations.getObservation(-1).setEnd(start)
                 except IndexError:
                     pass
-            # process current event
-            if node.tag == 'keyDown':
-                self._processKeyDown(node)
-            # append new observation
+            # append new observation based on delays
             observation = []
             for feature in self._feature_names:
                 try:
                     observation.append( start - self._time_elapsed[feature] )
                 except TypeError:
                     observation.append( None ) # if this feature has not yet been seen
+            # update delays
+            if node.tag == 'keyDown':
+                self._processKeyDown(node)
             self._observations.addObservation( Observation(start=start, end=end, value=observation) )
         self._prev_event_start_time = start
     
