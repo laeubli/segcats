@@ -6,7 +6,7 @@ Global test driver for XML adaptors
 import sys
 
 from adaptors.xml import *
-from fileIO import serialiseObservationSequence, readObservationSequence
+from fileIO import *
 
 #adaptor = XMLAdaptorSingleEventC('fixation')
 adaptor = XMLAdaptorComplexA(add_duration=True)

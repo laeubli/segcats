@@ -3,8 +3,19 @@
 """
 Provides file input/output functionality.
 """
-import sys, os, glob, csv
+import sys, os, errno, glob, csv
 from adaptors.observation import *
+
+def mkdir_p(path):
+    '''
+    Creates a directory and overwrites existing directories with the same name (mkdir -p).
+    '''
+    try:
+        os.makedirs(path)
+    except OSError as exc: # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else: raise
 
 def serialiseObservationSequence ( observation_sequence, file_path, feature_names, include_state=False ):
     """

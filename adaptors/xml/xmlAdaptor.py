@@ -43,6 +43,10 @@ class AbstractXMLAdaptor ( object ):
         self._events = events
         self._parametrisation = parametrisation
         self._window_length = window_length
+        self._FEATURES = ['value']
+    
+    def getFeatures ( self ):
+        return self._FEATURES
     
     def _fast_iter ( self, context ):
         '''
