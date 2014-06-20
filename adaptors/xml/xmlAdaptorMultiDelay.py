@@ -120,6 +120,7 @@ class XMLAdaptorMultiDelay2 ( XMLAdaptorMultiDelay1 ):
         timestamp = int( node.get('time') )
         self._time_elapsed['mouseDown'] = timestamp
 
+
 class XMLAdaptorMultiDelay3 ( XMLAdaptorMultiDelay2 ):
     """
     The same as XMLAdaptorComplexA2, but with the following additional event types:
