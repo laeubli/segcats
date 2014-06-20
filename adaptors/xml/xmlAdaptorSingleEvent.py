@@ -11,7 +11,7 @@ import sys
 from xmlAdaptor import *
 from adaptors.observation import Observation
 
-class XMLAdaptorSingleEventA ( AbstractXMLAdaptor ):
+class XMLAdaptorSingleDuration ( AbstractXMLAdaptor ):
     '''
     Event-based extraction of the duration attribute of a single event type.
     Example: Extract the length of all fixation events.
@@ -40,7 +40,7 @@ class XMLAdaptorSingleEventA ( AbstractXMLAdaptor ):
         self._observations.addObservation( Observation(start=start, end=end, value=[float(duration)]) )
 
 
-class XMLAdaptorSingleEventB ( AbstractXMLAdaptor ):
+class XMLAdaptorSingleDelay ( AbstractXMLAdaptor ):
     '''
     Event-based extraction of the inter-event delay between any two successive
     events of a single event type. Note: At the beginning the session (and each
@@ -76,7 +76,7 @@ class XMLAdaptorSingleEventB ( AbstractXMLAdaptor ):
             self._start_timestamp_of_previous_event = None # restart after session break
 
 
-class XMLAdaptorSingleEventC ( AbstractXMLAdaptor ):
+class XMLAdaptorSingleWindowDuration ( AbstractXMLAdaptor ):
     '''
     Window-based extraction of the duration attribute of a single event type.
     Example: Extract the total duration of eye-fixations in windows of equal
@@ -159,7 +159,7 @@ class XMLAdaptorSingleEventC ( AbstractXMLAdaptor ):
                 self._observations.addObservation( Observation(start=new_obs_start, end=new_obs_end, value=[0.0]) )
 
 
-class XMLAdaptorSingleEventD ( AbstractXMLAdaptor ):
+class XMLAdaptorSingleWindowCount ( AbstractXMLAdaptor ):
     '''
     Window-based counting of all events of a single event type.
     Example: Count the number of fixation events in windows of equal length.

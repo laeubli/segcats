@@ -9,7 +9,7 @@ from __future__ import division
 from xmlAdaptor import *
 from adaptors.observation import Observation
 
-class XMLAdaptorComplexA1 ( AbstractXMLAdaptor ):
+class XMLAdaptorMultiDelay1 ( AbstractXMLAdaptor ):
     '''
     Event-based extraction from CASMACAT XML. For each of the following events types,
     the delay to the previous event of each other event type is output. The event types are:
@@ -99,14 +99,14 @@ class XMLAdaptorComplexA1 ( AbstractXMLAdaptor ):
             self._time_elapsed['keyDownNormal'] = timestamp
 
 
-class XMLAdaptorComplexA2 ( XMLAdaptorComplexA1 ):
+class XMLAdaptorMultiDelay2 ( XMLAdaptorMultiDelay1 ):
     """
     The same as XMLAdaptorComplexA1, but with the following additional event types:
         - time since last mouse click (mouseDown event)
     """
     
     def __init__ ( self, add_duration=False ):
-        XMLAdaptorComplexA1.__init__( self, add_duration )
+        XMLAdaptorMultiDelay1.__init__( self, add_duration )
         self._events += ['mouseDown']
         self._feature_names += ['mouseDown']
     
@@ -120,7 +120,7 @@ class XMLAdaptorComplexA2 ( XMLAdaptorComplexA1 ):
         timestamp = int( node.get('time') )
         self._time_elapsed['mouseDown'] = timestamp
 
-class XMLAdaptorComplexA3 ( XMLAdaptorComplexA2 ):
+class XMLAdaptorMultiDelay3 ( XMLAdaptorMultiDelay2 ):
     """
     The same as XMLAdaptorComplexA2, but with the following additional event types:
         - time since last eye fixation on source text
@@ -128,7 +128,7 @@ class XMLAdaptorComplexA3 ( XMLAdaptorComplexA2 ):
     """
     
     def __init__ ( self, add_duration=False ):
-        XMLAdaptorComplexA2.__init__( self, add_duration )
+        XMLAdaptorMultiDelay2.__init__( self, add_duration )
         self._events += ['fixation']
         self._feature_names += ['fixationSource', 'fixationTarget']
         self._SOURCE_WINDOW = 1

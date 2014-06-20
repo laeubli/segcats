@@ -9,7 +9,7 @@ from adaptors.xml import *
 from fileIO import *
 
 #adaptor = XMLAdaptorSingleEventD('fixation')
-adaptor = XMLAdaptorComplexA3(add_duration=True)
+adaptor = XMLAdaptorMultiDelay3(add_duration=True)
 observation_sequence = adaptor.convert('/Users/sam/Documents/ausbildung/uni/msc_ai/thesis/Data/TPR Raw/CFT13/Translog-II/P01_P11.xml')
 #observation_sequence = adaptor.convert('test_log.xml')
 
