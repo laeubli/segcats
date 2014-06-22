@@ -52,7 +52,7 @@ class ObservationSequence ( object ):
         @param include_state (bool): Whether or not to include each observation's state information.
             This requires the _state attribute to be set for each Observation in self._observations.
         """
-        serialiseObservationSequence( self.get(), file_path, self._observation_feature_names, include_state=False )
+        serialiseObservationSequence( self.get(), file_path, self._observation_feature_names, include_state=include_state )
     
     def addObservation ( self, observation, position=None ):
         """

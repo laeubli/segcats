@@ -53,7 +53,8 @@ class XMLAdaptorMultiWindow1 ( AbstractXMLAdaptor ):
         with open(xml_filepath, 'r') as xml_file:
             context = etree.iterparse(xml_file, events=('end',), tag=self._events, recover=True)
             self._fast_iter(context)
-        return self._getObservationSequence()
+        self._observations = self._getObservationSequence() # combine observation sequences from subsessions into a single observation sequence
+        return self._observations
     
     def _processNode ( self, node ):
         timestamp = int( node.get('time') )

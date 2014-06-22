@@ -79,4 +79,8 @@ def floatToStr ( float_nr ):
     Returns a more precise string representation of @param float_nr (float) than str(float_nr).
     @return (str): the string representation of @param float_nr
     """ 
-    return format(float_nr, '.32f')
+    s = format(float_nr, '.64f')
+    s = s.rstrip('0') # removes zeros at the end of the string
+    if s.endswith('.'):
+        s += '0' # e.g., "0.0" instead of "0."
+    return s

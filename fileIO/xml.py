@@ -7,6 +7,7 @@ All XML schema definitions are stored in the /fileIO/xsd
 import sys, os
 from shared import floatToStr
 from lxml import etree  # @UnresolvedImport
+from sklearn.hmm import MultinomialHMM, GaussianHMM, GMMHMM # @UnresolvedImport
 
 XML_NAMESPACE = 'https://github.com/laeubli/segcats/fileIO/xsd/hmm'
 
@@ -19,7 +20,7 @@ class AbstractXMLSerialiser ( object ):
     def __init__ ( self, states, features, transition_probabilities, comment=None ):
         """
         Takes all HMM parameters to be serialised as an XML document. This base class deals with HMMs
-        @param states (list): the hidden states. Must include 'START' (first item) and 'END' (last item)
+        @param states (list): the hidden states. Must include 'START' (first item)
         @param features (list): the features, i.e., instances of AbstractFeature subclasses. These
             objects store the feature type and observation probabilities for all states.
         @param transition_probabilities (list): a list of lists where the first dimension corresponds to
@@ -56,7 +57,7 @@ class AbstractXMLSerialiser ( object ):
         self._initNamespace()
         # create root node of the document
         self._root = etree.Element(self._ns + "HMM", nsmap=self._nsMap)
-        self._root.attrib['states'] = str(len(self._states)) # add number of states to root node
+        self._root.attrib['states'] = str(len(self._states)-1) # add number of states (without START, hence -1) to root node
         self._root.attrib['features'] = str(len(self._features)) # add number of features to root node
         if self._comment:
             self._root.attrib['comment'] = self._comment
@@ -67,13 +68,10 @@ class AbstractXMLSerialiser ( object ):
         Adds references to the state nodes to self._state_nodes
         """
         assert(self._states[0] == 'START')
-        assert(self._states[-1] == 'END')
         self._state_nodes = []
         for state in self._states:
             if state == 'START':
                 state_name = 'startState'
-            elif state == 'END':
-                state_name = 'endState'
             else:
                 state_name = 'state'
             state_node = etree.SubElement(self._root, self._ns + state_name)
@@ -84,9 +82,8 @@ class AbstractXMLSerialiser ( object ):
         """
         Adds the transition probabilities to the state nodes.
         """
-        for from_state_index, state_node in enumerate(self._state_nodes[:-1]): 
+        for from_state_index, state_node in enumerate(self._state_nodes): 
         # state indices correspond to first dimension of self._transition_probabilities
-        # we deliberately leave out the last (=END) state here since it has no outgoing transitions
             # add <transitions> node to each <state> node
             transitions_node = etree.SubElement(state_node, self._ns + "transitions")
             for to_state_index, transition_probability in enumerate(self._transition_probabilities[from_state_index]):
@@ -108,6 +105,144 @@ class AbstractXMLSerialiser ( object ):
         @return (str): the XML serialisation of the converted HMM
         """
         return etree.tostring(self._root, pretty_print=pretty_print, encoding='UTF-8', xml_declaration=True)
+    
+    def saveXML ( self, file_path, pretty_print=True ):
+        """
+        Saves the serialised model to @param file_path.
+        """
+        with open(file_path, 'w') as f:
+            f.write(self.getXML(pretty_print=pretty_print))
+
+
+def HMMSerialiser ( model, state_names=None, feature_names=None, comment=None ):
+    """
+    Returns the corresponding HMMSerialiser object for a Multinomial, Gaussian, or GMM HMM model.
+    """
+    if isinstance(model, MultinomialHMM):
+        return MultinomialHMMSerialiser(model, state_names, feature_names, comment)
+    elif isinstance(model, GaussianHMM):
+        return GaussianHMMSerialiser(model, state_names, feature_names, comment)
+    elif isinstance(model, GMMHMM):
+        return GMMHMMSerialiser(model, state_names, feature_names, comment)
+    else:
+        sys.exit("Cannot serialise HMM model to XML: The model must be of type MultinomialHMM, GaussianHMM, or GMMHMM from the sklearn.hmm package.")
+
+
+class MultinomialHMMSerialiser ( AbstractXMLSerialiser ):
+    """
+    #TODO
+    """
+    pass
+
+
+class GaussianHMMSerialiser ( AbstractXMLSerialiser ):
+    """
+    Converts the parameters of a GassianHMM model to XML.
+    """
+
+    def __init__ ( self, model, state_names=None, feature_names=None, comment=None):
+        assert isinstance(model, GaussianHMM)
+        self._model = model
+        # set default state names if none provided
+        if not state_names:
+            state_names = ['START'] + ['H%s' % i for i in range(0, model.n_components)]
+        # set default feature names if none provided
+        if not feature_names:
+            feature_names = ['F%s' % i[0] for i in enumerate(model.means_[0])]
+        # convert transition matrix
+        transition_probabilities = [ [None] + list(model.startprob_) ] + list([ [None] + list(t) for t in model.transmat_]) # [None] denotes zero-transition-probabilities to the START state
+        # initialise base class
+        AbstractXMLSerialiser.__init__(self, state_names, feature_names, transition_probabilities, comment)
+        # set additional root node attributes
+        self._root.attrib['type'] = "Gaussian"
+        self._root.attrib['covarianceType'] = 'diagonal' if model._covariance_type == 'diag' else 'full'
+        # add observation probabilities
+        self._addObservationProbabilities()
+    
+    def _addObservationProbabilities( self ):
+        for state_index, state_node in enumerate(self._state_nodes[1:], 0): 
+        # state indices correspond to first dimension of self._transition_probabilities
+        # we deliberately leave out the first (=START) state here since it is non-emitting
+            # add <observations> node to each <state> node
+            observations_node = etree.SubElement(state_node, self._ns + "observations")
+            # add <continuousFeature> feature to <observations> for each feature
+            for feature_index, feature_name in enumerate(self._features):
+                continuousFeature_node = etree.SubElement(observations_node, self._ns + "continuousFeature")
+                continuousFeature_node.attrib['name'] = feature_name
+                # add Gaussian with mean and variance to <continuousFeature>
+                mean = self._model.means_[state_index][feature_index]
+                mean = floatToStr(mean)
+                variance = self._model.covars_[state_index][feature_index][feature_index]
+                variance = floatToStr(variance)
+                Gaussian_node = etree.SubElement(continuousFeature_node, self._ns + "Gaussian")
+                Gaussian_node.attrib['mean'] = mean
+                Gaussian_node.attrib['variance'] = variance
+                # add covariances if covariance type is 'full'
+                if self._model._covariance_type == 'full':
+                    for other_feature_index, other_feature_name in enumerate(self._features):
+                        if other_feature_index != feature_index:
+                            covariance_node = etree.SubElement(Gaussian_node, self._ns + "covariance")
+                            covariance_node.attrib['with'] = other_feature_name
+                            covariance_node.text = floatToStr(self._model.covars_[state_index][feature_index][other_feature_index])
+
+class GMMHMMSerialiser ( AbstractXMLSerialiser ):
+    """
+    Converts the parameters of a GMMHMM model to XML.
+    """
+
+    def __init__ ( self, model, state_names=None, feature_names=None, comment=None):
+        assert isinstance(model, GMMHMM)
+        self._model = model
+        # set default state names if none provided
+        if not state_names:
+            state_names = ['START'] + ['H%s' % i for i in range(0, model.n_components)]
+        # set default feature names if none provided
+        if not feature_names:
+            feature_names = ['F%s' % i[0] for i in enumerate(model.means_[0])]
+        # convert transition matrix
+        transition_probabilities = [ [None] + list(model.startprob_) ] + list([ [None] + list(t) for t in model.transmat_]) # [None] denotes zero-transition-probabilities to the START state
+        # initialise base class
+        AbstractXMLSerialiser.__init__(self, state_names, feature_names, transition_probabilities, comment)
+        # set additional root node attributes
+        self._root.attrib['type'] = "GMM"
+        self._root.attrib['mixtureComponents'] = str( len(model.gmms_[0].weights_) )
+        self._root.attrib['covarianceType'] = 'diagonal' if model._covariance_type == 'diag' else 'full'
+        # add observation probabilities
+        self._addObservationProbabilities()
+    
+    def _addObservationProbabilities( self ):
+        for state_index, state_node in enumerate(self._state_nodes[1:], 0): 
+        # state indices correspond to first dimension of self._transition_probabilities
+        # we deliberately leave out the first (=START) state here since it is non-emitting
+            # add <observations> node to each <state> node
+            observations_node = etree.SubElement(state_node, self._ns + "observations")
+            # add <continuousFeature> feature to <observations> for each feature
+            component_weights = self._model.gmms_[state_index].weights_
+            for feature_index, feature_name in enumerate(self._features):
+                continuousFeature_node = etree.SubElement(observations_node, self._ns + "continuousFeature")
+                continuousFeature_node.attrib['name'] = feature_name
+                # add <GMM> node to <continuousFeature>
+                GMM_node = etree.SubElement(continuousFeature_node, self._ns + "GMM")
+                for component_index, component_weight in enumerate(component_weights):
+                    # add Gaussian with mean, variance, and weight to <GMM>
+                    mean = self._model.gmms_[state_index].means_[component_index][feature_index]
+                    mean = floatToStr(mean)
+                    variance = self._model.gmms_[state_index].covars_[component_index][feature_index]
+                    if self._model._covariance_type == 'full':
+                        variance = variance[feature_index]
+                    variance = floatToStr(variance)
+                    Gaussian_node = etree.SubElement(GMM_node, self._ns + "Gaussian")
+                    Gaussian_node.attrib['mean'] = mean
+                    Gaussian_node.attrib['variance'] = variance
+                    Gaussian_node.attrib['weight'] = floatToStr( component_weight )
+                    # add covariances if covariance type is 'full'
+                    if self._model._covariance_type == 'full':
+                        for other_feature_index, other_feature_name in enumerate(self._features):
+                            if other_feature_index != feature_index:
+                                covariance_node = etree.SubElement(Gaussian_node, self._ns + "covariance")
+                                covariance_node.attrib['with'] = other_feature_name
+                                covariance = self._model.gmms_[state_index].covars_[component_index][feature_index][other_feature_index]
+                                covariance_node.text = floatToStr(covariance)
 
 
 class SingleGaussianHMM_XMLSerialiser ( AbstractXMLSerialiser ):

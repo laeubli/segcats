@@ -9,11 +9,32 @@
                 <xs:choice maxOccurs="unbounded">
                     <xs:element name="state" type="emittingState"/>
                 </xs:choice>
-                <xs:element name="endState" type="endState"/>
             </xs:sequence>
-            <xs:attribute name="states" type="xs:positiveInteger" use="required"/>
-            <xs:attribute name="features" type="xs:positiveInteger" use="required"/>
-            <xs:attribute name="type" type="xs:string" use="optional"/>
+            <xs:attribute name="states" type="xs:positiveInteger" use="required">
+                <xs:annotation>
+                    <xs:documentation>Number of hidden states</xs:documentation>
+                </xs:annotation>
+            </xs:attribute>
+            <xs:attribute name="features" type="xs:positiveInteger" use="required">
+                <xs:annotation>
+                    <xs:documentation>Number of features for each observation</xs:documentation>
+                </xs:annotation>
+            </xs:attribute>
+            <xs:attribute name="type" type="hmmType" use="required">
+                <xs:annotation>
+                    <xs:documentation>"Multinomial", "Gaussian", or "GMM"</xs:documentation>
+                </xs:annotation>
+            </xs:attribute>
+            <xs:attribute name="mixtureComponents" type="xs:int">
+                <xs:annotation>
+                    <xs:documentation>The number of mixture components (number of Gaussians per feature). For type "GMM" only.</xs:documentation>
+                </xs:annotation>
+            </xs:attribute>
+            <xs:attribute name="covarianceType" type="hmmCovarianceType">
+                <xs:annotation>
+                    <xs:documentation>"full" or "diagonal"</xs:documentation>
+                </xs:annotation>
+            </xs:attribute>
             <xs:attribute name="note" type="xs:string"/>
         </xs:complexType>
     </xs:element>
@@ -61,20 +82,52 @@
     </xs:complexType>
     <xs:complexType name="continuousFeature">
         <xs:choice>
-            <xs:element name="Gaussian">
-                <xs:complexType>
-                    <xs:attribute name="mean" type="xs:float" use="required"/>
-                    <xs:attribute name="variance" type="xs:float" use="required"/>
+            <xs:element name="Gaussian" type="Gaussian"> </xs:element>
+            <xs:element name="GMM" type="GMM"/>
+        </xs:choice>
+        <xs:attribute name="name" type="xs:string"/>
+    </xs:complexType>
+    <xs:complexType name="Gaussian">
+        <xs:choice maxOccurs="unbounded" minOccurs="0">
+            <xs:element name="covariance">
+                <xs:complexType mixed="true">
+                    <xs:attribute name="with" type="xs:string" use="required">
+                        <xs:annotation>
+                            <xs:documentation>The name of the continuousFeature this feature covaries with</xs:documentation>
+                        </xs:annotation>
+                    </xs:attribute>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="Weibull">
+        </xs:choice>
+        <xs:attribute name="mean" type="xs:float" use="required"/>
+        <xs:attribute name="variance" type="xs:float" use="required"/>
+    </xs:complexType>
+    <xs:complexType name="GMM">
+        <xs:choice maxOccurs="unbounded">
+            <xs:element name="Gaussian">
                 <xs:complexType>
-                    <xs:attribute name="shape" type="xs:float" use="required"/>
-                    <xs:attribute name="scale" type="xs:float" use="required"/>
+                    <xs:complexContent>
+                        <xs:extension base="Gaussian">
+                            <xs:attribute name="weight" type="xs:float" use="required"/>
+                        </xs:extension>
+                    </xs:complexContent>
                 </xs:complexType>
             </xs:element>
         </xs:choice>
     </xs:complexType>
+    <xs:simpleType name="hmmType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Multinomial"/>
+            <xs:enumeration value="Gaussian"/>
+            <xs:enumeration value="GMM"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="hmmCovarianceType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="full"/>
+            <xs:enumeration value="diagonal"/>
+        </xs:restriction>
+    </xs:simpleType>
     <xs:simpleType name="stateName">
         <xs:restriction base="xs:string"/>
     </xs:simpleType>

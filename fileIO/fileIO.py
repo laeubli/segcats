@@ -4,7 +4,7 @@
 Provides file input/output functionality.
 """
 import sys, os, errno, glob, csv
-from adaptors.observation import *
+from adaptors.observation import Observation
 
 def mkdir_p(path):
     '''
@@ -63,14 +63,15 @@ def readObservationSequences ( path, features=None, return_filenames=False ):
         Returns all features (i.e., all rows except for 'start' and 'end') by default.
     @param return_filenames (bool): Whether or not to also return a list of the file
         names of all read-in original files.
-    @return (list): A list of observation sequence, where each observation sequence
-        consists of a list of Observation objects; plus the list of file names if
-        @param return_filenames is True.
+    @return (list): A list of observation sequences, where each observation sequence
+        consists of a list of an ObservationSequence object; plus the list of file names
+        if @param return_filenames is True.
     """
+    from adaptors.observationSequence import ObservationSequence
     observation_sequences = []
     file_names = []
     for file_path in glob.glob(path):
-        observation_sequences.append( readObservationSequence(file_path, features) )
+        observation_sequences.append( ObservationSequence(file_path, feature_names=features) )
         file_names.append( os.path.basename(file_path) )
     if return_filenames:
         return observation_sequences, file_names
