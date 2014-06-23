@@ -29,4 +29,5 @@ from xml import *
 
 reader = HMMReader('/Users/sam/Documents/ausbildung/uni/msc_ai/thesis/Models/MultivariateGaussianHMM/keyDown/A/P/3states/model_gmm.xml')
 model = reader.getModel()
+#print model.covars_
 print model.gmms_[0].covars_

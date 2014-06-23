@@ -424,13 +424,13 @@ class HMMReader ( AbstractXMLReader ):
                                 params = '',
                                 init_params = ''
                                )
-            model.means_ = self._means
+            model._set_means(self._means)
             if self._covariance_type == 'diag':
-                model.covars_ = [np.diag(cv) for cv in self._covars]
+                model._set_covars([np.diag(cv) for cv in self._covars])
             else:
                 #for n, cv in enumerate(self._covars):
                 #    print n, np.allclose(cv, cv.T), np.any(linalg.eigvalsh(cv) <= 0)
-                model.covars_ = self._covars # TODO: solve problem with covariance matrices with all equal values
+                model._set_covars(self._covars) # TODO: solve problem with covariance matrices with all equal values
             return model
         elif self._type == 'GMM':
             model = GMMHMM( n_components = len(self._states[1:]), # exclude START state
