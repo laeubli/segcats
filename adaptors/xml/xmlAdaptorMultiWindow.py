@@ -126,6 +126,7 @@ class XMLAdaptorMultiWindow1 ( AbstractXMLAdaptor ):
                     observation_sequence.addObservation(observation)
             return observation_sequence
         except TypeError:
+            sys.stderr.write("Warning: Cannot extract events in %s. This translation session contains an invalid subsession structure, i.e., a differnet number of <startSession> and <stopSession> markers." % self._xml_filepath)
             return None # invalid subsession structure in XML log file, i.e., different number of <startSession> and <stopSession> events
 
 
