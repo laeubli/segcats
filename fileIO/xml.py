@@ -5,9 +5,14 @@ Provides classes for writing HMMs to and reading HMMs from XML files.
 All XML schema definitions are stored in the /fileIO/xsd
 """
 import sys, os
-from shared import floatToStr
+
+import numpy as np
+from scipy import linalg
 from lxml import etree  # @UnresolvedImport
 from sklearn.hmm import MultinomialHMM, GaussianHMM, GMMHMM # @UnresolvedImport
+from sklearn.mixture import GMM # @UnresolvedImport
+
+from shared import floatToStr
 
 XML_NAMESPACE = 'https://github.com/laeubli/segcats/fileIO/xsd/hmm'
 
@@ -245,67 +250,6 @@ class GMMHMMSerialiser ( AbstractXMLSerialiser ):
                                 covariance_node.text = floatToStr(covariance)
 
 
-class SingleGaussianHMM_XMLSerialiser ( AbstractXMLSerialiser ):
-    """
-    Converts the parameters of a SingleGaussianHMM to XML.
-    """
-    def __init__ ( self, states, means_variances, transition_probabilities, comment=None ):
-        """
-        Takes all HMM parameters to be serialised as an XML document. This base class deals with HMMs
-        @param states (list): the hidden states. Must include 'START' (first item) and 'END' (last item)
-        @param means_variances (list): the mean and variance for each state's probability density function
-            (PDF). One (mean,variance) tuple of floats per state, with their order corresponding to @param
-            states
-        @param transition_probabilities (list): a list of lists where the first dimension corresponds to
-            the index of the from_state and the second dimension to the index of the to_state, according
-            to @param states. The transition probabilities from from_state to to_state are floats.
-            Example: transition_probabilities[0][2] = -1.084332453
-        @param comment (str): A comment that will be added to the root node, e.g., a quick description
-            of the model and/or its purpose.
-        """
-        # add field variables
-        self._states = states
-        self._means_variances = means_variances
-        self._transition_probabilities = transition_probabilities
-        self._comment = comment
-        # create xml tree
-        self._initRoot()
-        self._addStates()
-        self._addTransitionProbabilities()
-        self._addObservationProbabilities()
-    
-    def _initRoot ( self ):
-        """
-        @Override _initRoot() from parent class because a SingleGaussianHMM has exactly one feature
-        Initialises the root node of the XML document. 
-        """
-        # initialise default namespace
-        self._initNamespace()
-        # create root node of the document
-        self._root = etree.Element(self._ns + "HMM", nsmap=self._nsMap)
-        self._root.attrib['states'] = str(len(self._states)) # add number of states to root node
-        self._root.attrib['features'] = str(1) # a SingleGaussianHMM has exactly one feature
-        self._root.attrib['type'] = "SingleGaussianHMM"
-        if self._comment:
-            self._root.attrib['comment'] = self._comment
-    
-    def _addObservationProbabilities( self ):
-        for from_state_index, state_node in enumerate(self._state_nodes[1:-1], 1): 
-        # state indices correspond to first dimension of self._transition_probabilities
-        # we deliberately leave out the first (=START) and last (=END) state here since they are non-emitting.
-            # add <observations> node to each <state> node
-            observations_node = etree.SubElement(state_node, self._ns + "observations")
-            # add <continuousFeature> feature to <observations>
-            continuousFeature_node = etree.SubElement(observations_node, self._ns + "continuousFeature")
-            # add Gaussian with mean and variance to <continuousFeature>
-            mean, variance = self._means_variances[from_state_index]
-            mean = floatToStr(mean)
-            variance = floatToStr(variance)
-            Gaussian_node = etree.SubElement(continuousFeature_node, self._ns + "Gaussian")
-            Gaussian_node.attrib['mean'] = mean
-            Gaussian_node.attrib['variance'] = variance
-        
-        
 class AbstractXMLReader ( object ):
     """
     Reads the parameters of a HMM from an XML file, i.e., loads a HMM model from disk.
@@ -332,21 +276,31 @@ class AbstractXMLReader ( object ):
     def getStates ( self ):
         """
         Returns the states of the loaded HMM.
-        @return (list): a list of state names, starting with 'START' and ending with 'END'
+        @return (list): a list of state names, without START.
         """
-        return self._states
+        return self._states[1:] # leave out the START state
     
-    def getTransitionProbabilities ( self ):
+    def getStateTransitionProbabilities ( self ):
         """
-        Returns the transition matrix of the loaded HMM.
+        Returns the transition matrix for transitions between the hidden states of the loaded HMM.
         @return (list): a list of lists where the first dimension corresponds to the index of the 
-            from_state and the second dimension to the index of the to_state, according to @param 
-            states. The transition probabilities from from_state to to_state are floats. Example: 
+            from_state and the second dimension to the index of the to_state, according to 
+            self._states. The transition probabilities from from_state to to_state are floats. 
+            Example: transition_probabilities[0][2] = -1.084332453
+        """
+        return self._state_transition_probabilities
+    
+    def getStartTransitionProbabilities ( self ):
+        """
+        Returns the transition matrix for transitions between the START and any hidden state of
+            the loaded HMM.
+        @return (list): a list of lists where the first dimension corresponds to the index of the 
+            to_state, according to self._states. The transition probabilities from from_state to to_state are floats. Example: 
             transition_probabilities[0][2] = -1.084332453
         """
-        return self._transition_probabilities
+        return self._start_transition_probabilities
     
-    ### getObservationProbabilities(), getMeansVariances(), getFeatures() etc. need to be card for
+    ### getObservationProbabilities(), getMeansVariances(), getFeatures() etc. need to be cared for
     ### in the respective subclass.
     
     def _initNamespace ( self ):
@@ -394,13 +348,12 @@ class AbstractXMLReader ( object ):
         self._state_nodes = []
         for state_node in self._root:
             start_node_tag = self._removeNS(state_node.tag)
-            assert(start_node_tag in ['state','startState','endState'])
+            assert(start_node_tag in ['state','startState'])
             self._states.append(state_node.get('name'))
             self._state_nodes.append(state_node)
         # just to double-check...
-        assert(len(self._states) > 2) # there must be at least a START, an END, and one emitting state
+        assert(len(self._states) > 1) # there must be at least a START, an END, and one emitting state
         assert(self._states[0]) == 'START'
-        assert(self._states[-1]) == 'END'
     
     def _readTransitionProbabilities ( self ):
         """
@@ -410,7 +363,7 @@ class AbstractXMLReader ( object ):
         """
         # initialise transition probability matrix with all zeros as zero-transitions are *not* explicitly mentioned in the XML serialisation
         transition_probabilities = [ [None]*len(self._states) for state in self._states ]
-        for state_node in self._state_nodes[:-1]: # leave out the END state as it has no outgoing transitions
+        for state_node in self._state_nodes:
             # get index of from_state
             from_state_name = state_node.get('name')
             from_state_index = self._states.index(from_state_name)
@@ -424,65 +377,190 @@ class AbstractXMLReader ( object ):
                 to_state_index = self._states.index(to_state_name)
                 probability = transition_node.get('probability')
                 # add transition probability to matrix
-                transition_probabilities[from_state_index][to_state_index] = float(probability)
-        self._transition_probabilities = transition_probabilities
-            
-            
-class SingleGaussianHMM_XMLReader ( AbstractXMLReader ):
+                transition_probabilities[from_state_index][to_state_index] = np.float64(probability)
+        self._start_transition_probabilities = np.array(transition_probabilities[0][1:])
+        self._state_transition_probabilities = np.array([ t[1:] for t in transition_probabilities[1:] ])
+
+
+class HMMReader ( AbstractXMLReader ):
     """
-    Reads the parameters of a SingleGaussianHMM from an XML file, i.e., loads a HMM model 
-    from disk. The XML files must validate against the XSD stored in /fileIO/xsd/hmm.xsd.
+    Reads the parameters of a Multinomial, Gaussian, or GMM HMM from an XML file, i.e., loads a
+    HMM model from disk. The XML files must validate against the XSD stored in /fileIO/xsd/hmm.xsd.
     """
     
     def __init__ ( self, path ):
         """
         Reads the XML file at @param path, validates it, and extracts the HMM parameters. Upon
-        completion, the HMM parameters can be accessed via
+        completion, the HMM model or individual parameters can be accessed via
+            self.getModel()
             self.getStates()
-            self.getTransitionProbabilities()
-            self.getMeansVariances()
+            self.getFeatures()
+            self.getStartTransitionProbabilities()
+            self.getStateTransitionProbabilities()
         @param path: the location of the XML file to be read
         """
         AbstractXMLReader.__init__(self, path)
-        if 'type' in self._root.attrib.keys():
-            if self._root.attrib['type'] != 'SingleGaussianHMM':
-                sys.stderr.write('Warning: Loading HMM parameter definitions of type "%s", while "SingleGaussianHMM" was expected.' % self._root.attrib['type'])
-        self._readMeansVariances()
-        
-    def getMeansVariances ( self ):
-        """
-        Returns the means and variances (=observation probabilities) from the loaded XML.
-        @return (list): returns the mean and variance for each state's probability density function
-            (PDF). One (mean,variance) tuple of floats per state, with their order corresponding to
-            self._states
-        """
-        return self._means_variances
+        # read additional root attributes and determine model type (Multinomial, Gaussian, GMM)
+        self._type = self._root.attrib['type']
+        self._num_features = int( self._root.attrib['features'] )
+        if self._type in ['Gaussian', 'GMM']:
+            self._covariance_type = 'diag' if self._root.attrib['covarianceType'] == 'diagonal' else self._root.attrib['covarianceType']
+            if self._type == 'GMM':
+                self._num_mixture_components = int( self._root.attrib['mixtureComponents'] )
+        self._readObservationProbabilities()
     
-    def _readMeansVariances ( self ):
+    def getModel ( self ):
+        """
+        Returns a HMM model of type sklearn.hmm.{Multinomial,Gaussian,GMM}, according
+        to the loaded XML.
+        """
+        if self._type == 'Multinomial':
+            pass #TODO
+        elif self._type == 'Gaussian':
+            model = GaussianHMM( n_components = len(self._states[1:]), # exclude START state
+                                covariance_type = self._covariance_type,
+                                startprob = self.getStartTransitionProbabilities(),
+                                transmat = self.getStateTransitionProbabilities(),
+                                params = '',
+                                init_params = ''
+                               )
+            model.means_ = self._means
+            if self._covariance_type == 'diag':
+                model.covars_ = [np.diag(cv) for cv in self._covars]
+            else:
+                #for n, cv in enumerate(self._covars):
+                #    print n, np.allclose(cv, cv.T), np.any(linalg.eigvalsh(cv) <= 0)
+                model.covars_ = self._covars # TODO: solve problem with covariance matrices with all equal values
+            return model
+        elif self._type == 'GMM':
+            model = GMMHMM( n_components = len(self._states[1:]), # exclude START state
+                                covariance_type = self._covariance_type,
+                                startprob = self.getStartTransitionProbabilities(),
+                                transmat = self.getStateTransitionProbabilities(),
+                                gmms = self._GMMs,
+                                params = '',
+                                init_params = ''
+                               )
+            return model
+
+    def _readObservationProbabilities ( self ):
         """
         @pre: the constructor of the parent class must be executed beforehand
         @pre: _readStates() needs to be executed beforehand
-        Reads the mean and variance for each state's Gaussian and stores them in 
-            self._means_variances.
+        Reads the observation probabilities; this is delegated to the relevant helper function
+            for the adequate model type (Multinomial, Gaussian, HMM).
         """
-        means_variances = [(None, None)] * len(self._states) # initialise empty vector for all states
-        for state_node in self._state_nodes[1:-1]: # leave out the START and END state as they are non-emitting
+        if self._type == 'Multinomial':
+            self._readObservationProbabilitiesMultinomial()
+        elif self._type == 'Gaussian':
+            self._readObservationProbabilitiesGaussian()
+        elif self._type == 'GMM':
+            self._readObservationProbabilitiesGMM()
+        else:
+            sys.exit("Cannot read HMM model from XML: Only models of type Multinomial, Gaussian, or GMM are supproted.")
+    
+    def _readObservationProbabilitiesMultinomial ( self ):
+        """
+        TODO
+        """
+        pass
+
+    def _readObservationProbabilitiesGaussian ( self ):
+        """
+        Reads the means and covariance matrices for the Gaussians of a Gaussian HMM.
+        """
+        # initialise empty matrices for means and covariances
+        means = [ [ 0.0 for f in range(self._num_features) ] for s in self._states[1:] ] # START state is non-emitting
+        covars = [ [ [ 0.0 for f in range(self._num_features) ] for f in range(self._num_features) ] for s in self._states[1:] ] # START state is non-emitting
+        self._features = []
+        # read observation probabilities for each state
+        for state_node in self._state_nodes[1:]: # leave out the START state as it is non-emitting
             # get index of from_state
             state_name = state_node.get('name')
-            state_index = self._states.index(state_name)
+            state_index = self._states[1:].index(state_name)
             # get <observations> node and make sure there is exactly one <continuousFeature> attached to it
             observations_node = state_node.find( self._ns + "observations")
-            for i, feature_node in enumerate(observations_node):
-                # make sure the format is correct
-                if i > 0 or feature_node.tag != self._ns + 'continuousFeature':
-                    sys.exit("Error reading HMM definition from XML file: In a SingleGaussianHMM, every state has exactly one continuousFeature. This condition is not met in the provided XML file.")
+            for feature_node in observations_node:
+                # get feature name and index
+                feature_name = feature_node.get('name')
+                if len(self._features) < self._num_features:
+                    self._features.append(feature_name)
+                feature_index = self._features.index(feature_name)
                 # get Gaussians
-                for j, gaussian_node in enumerate(feature_node):
+                for gaussian_index, gaussian_node in enumerate(feature_node):
                     # make sure the format is correct
-                    if i > 0:
-                        sys.exit("Error reading HMM definition from XML file: In a SingleGaussianHMM, each state's continuousFeature has exactly one Gaussian. This condition is not met in the provided XML file.")
-                    mean = gaussian_node.get('mean')
-                    variance = gaussian_node.get('variance')    
+                    if gaussian_index > 0:
+                        sys.exit("Error reading HMM definition from XML file: In a Gaussian HMM, each state's continuousFeatures have exactly one Gaussian each. This condition is not met in the provided XML file.")
+                    mean = np.float64( gaussian_node.get('mean') )
+                    variance = np.float64( gaussian_node.get('variance') )
                     # add mean and variance to the respective vector
-                    means_variances[state_index] = ( float(mean), float(variance) )
-        self._means_variances = means_variances
+                    means[state_index][feature_index] = mean
+                    covars[state_index][feature_index][feature_index] = variance
+                    # read covariances if applicable
+                    if self._covariance_type == 'full':
+                        for covariance_node in gaussian_node:
+                            assert(covariance_node.tag == self._ns + 'covariance')
+                            other_feature_name = covariance_node.get('with')
+                            if len(self._features) < self._num_features:
+                                self._features.append(other_feature_name)
+                            other_feature_index = self._features.index(other_feature_name)
+                            covariance = np.float64( covariance_node.text.strip() )
+                            covars[state_index][feature_index][other_feature_index] = covariance
+        self._means = np.array(means)
+        self._covars = np.array(covars)
+    
+    def _readObservationProbabilitiesGMM ( self ):
+        """
+        Reads the means and covariance matrices for the GMMs of a GMM HMM.
+        """
+        self._features = []
+        self._GMMs = []
+        # read observation probabilities for each state (one GMM per state)
+        for state_node in self._state_nodes[1:]: # leave out the START state as it is non-emitting
+            # initialise empty GMM matrices
+            means = [ [ 0.0 for f in range(self._num_features) ] for s in range(self._num_mixture_components) ] # START state is non-emitting
+            covars = [ [ [ 0.0 for f in range(self._num_features) ] for f in range(self._num_features) ] for s in range(self._num_mixture_components) ] # START state is non-emitting
+            weights = [ 0.0 for w in range(self._num_mixture_components) ]
+            # get index of from_state
+            state_name = state_node.get('name')
+            state_index = self._states[1:].index(state_name)
+            # get <observations> node and make sure there is exactly one <continuousFeature> attached to it
+            observations_node = state_node.find( self._ns + "observations")
+            for feature_node in observations_node:
+                # get feature name and index
+                feature_name = feature_node.get('name')
+                if len(self._features) < self._num_features:
+                    self._features.append(feature_name)
+                feature_index = self._features.index(feature_name)
+                # get Gaussians
+                for GMM_index, GMM_node in enumerate(feature_node):
+                    for gaussian_index, gaussian_node in enumerate(GMM_node):
+                        # get mean, variance, and weight for each Gaussian
+                        mean = np.float64( gaussian_node.get('mean') )
+                        variance = np.float64( gaussian_node.get('variance') )
+                        weight = np.float64( gaussian_node.get('weight') )
+                        # store mean, variance, and weight
+                        means[gaussian_index][feature_index] = mean
+                        covars[gaussian_index][feature_index][feature_index] = variance
+                        weights[gaussian_index] = weight # Note: no sanity check here; must sum to 1 and be the same for all GMMs across states
+                        # read covariances if applicable
+                        if self._covariance_type == 'full':
+                            for covariance_node in gaussian_node:
+                                assert(covariance_node.tag == self._ns + 'covariance')
+                                other_feature_name = covariance_node.get('with')
+                                if len(self._features) < self._num_features:
+                                    self._features.append(other_feature_name)
+                                other_feature_index = self._features.index(other_feature_name)
+                                covariance = np.float64( covariance_node.text.strip() )
+                                covars[gaussian_index][feature_index][other_feature_index] = covariance
+            new_GMM = GMM( n_components = self._num_mixture_components,
+                                    covariance_type = self._covariance_type,
+                                    params = '',
+                                    init_params = '' )
+            new_GMM.means_ = np.array(means)
+            if self._covariance_type == 'diag':
+                new_GMM.covars_ = np.array( [np.diag(np.array(cv)) for cv in covars] )
+            else:
+                new_GMM.covars_ = np.array(covars)
+            new_GMM.weights_ = np.array(weights)
+            self._GMMs.append(new_GMM)
