@@ -71,8 +71,12 @@ def readObservationSequences ( path, features=None, return_filenames=False ):
     observation_sequences = []
     file_names = []
     for file_path in glob.glob(path):
-        observation_sequences.append( ObservationSequence(file_path, feature_names=features) )
-        file_names.append( os.path.basename(file_path) )
+        observation_sequence = ObservationSequence(file_path, feature_names=features)
+        if observation_sequence:
+            observation_sequences.append( observation_sequence )
+            file_names.append( os.path.basename(file_path) )
+        else:
+            sys.stderr.write("Warning: Cannot read events in %s. This translation session contains an invalid subsession structure, i.e., a differnet number of <startSession> and <stopSession> markers." % file_path)
     if return_filenames:
         return observation_sequences, file_names
     else:

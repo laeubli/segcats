@@ -99,31 +99,34 @@ class XMLAdaptorMultiWindow1 ( AbstractXMLAdaptor ):
         the observations in self._observations as Observation objects to them.
         """
         observation_sequence = ObservationSequence(feature_names=self._feature_names)
-        for subsession_index, (subsession_start, subsession_end) in enumerate(self._subsessions):
-            # create list for all Observations of this subsession
-            observations = []
-            start = subsession_start
-            end = subsession_start + self._window_length
-            # add an empty Observation for each window
-            while end < subsession_end:
-                observations.append( Observation(start=start, end=end, value=[0 for f in self._feature_names]) )
-                start = end
-                end += self._window_length
-            observations.append( Observation(start=start, end=subsession_end, value=[0 for f in self._feature_names]) ) # for last window (may be shorter than self._window_length)
-            # update counts/duration for each window (Observation) of this subsession
-            for obs_start, obs_type, obs_value in self._observations[subsession_index]:
-                window_index = (obs_start - subsession_start) // self._window_length
-                window_value = observations[window_index].getValue()
-                feature_index = self._feature_names.index(obs_type)
-                if self._use_duration and obs_value != True:
-                    window_value[feature_index] += obs_value # increase duration
-                else:
-                    window_value[feature_index] += 1 # increase count
-                observations[window_index].setValue(window_value)
-            # add windows (Observations) of current subsession to observation sequence
-            for observation in observations:
-                observation_sequence.addObservation(observation)
-        return observation_sequence
+        try:
+            for subsession_index, (subsession_start, subsession_end) in enumerate(self._subsessions):
+                # create list for all Observations of this subsession
+                observations = []
+                start = subsession_start
+                end = subsession_start + self._window_length
+                # add an empty Observation for each window
+                while end < subsession_end:
+                    observations.append( Observation(start=start, end=end, value=[0 for f in self._feature_names]) )
+                    start = end
+                    end += self._window_length
+                observations.append( Observation(start=start, end=subsession_end, value=[0 for f in self._feature_names]) ) # for last window (may be shorter than self._window_length)
+                # update counts/duration for each window (Observation) of this subsession
+                for obs_start, obs_type, obs_value in self._observations[subsession_index]:
+                    window_index = (obs_start - subsession_start) // self._window_length
+                    window_value = observations[window_index].getValue()
+                    feature_index = self._feature_names.index(obs_type)
+                    if self._use_duration and obs_value != True:
+                        window_value[feature_index] += obs_value # increase duration
+                    else:
+                        window_value[feature_index] += 1 # increase count
+                    observations[window_index].setValue(window_value)
+                # add windows (Observations) of current subsession to observation sequence
+                for observation in observations:
+                    observation_sequence.addObservation(observation)
+            return observation_sequence
+        except TypeError:
+            return None # invalid subsession structure in XML log file, i.e., different number of <startSession> and <stopSession> events
 
 
 class XMLAdaptorMultiWindow2 ( XMLAdaptorMultiWindow1 ):
