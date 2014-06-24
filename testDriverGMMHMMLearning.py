@@ -154,31 +154,3 @@ for i in range(num_GMM_models):
     # update meta parameters for next iteration
     m_components = new_m(m_components)
     previous_model = gmm_model
-    
-# model.fit(training_sequences)
-# 
-# # save Gaussian HMM model to file
-# model_dir = output_dir + '%sstates/' % n_components
-# mkdir_p(model_dir)
-# serialiser = HMMSerialiser(model, feature_names=adaptor.getFeatures())
-# serialiser.saveXML(model_dir + 'model.xml')
-#  
-# print "Tagging observation sequences..."
-# tagged_sequences_dir = model_dir + "tagged_sequences/"
-# mkdir_p(tagged_sequences_dir)
-# for i, training_sequence in enumerate(training_sequences):
-#     hidden_state_sequence = model.predict(training_sequence)
-#     for j, state in enumerate(hidden_state_sequence):
-#         observation_sequences[i].getObservation(j).setState( "H%s" % state )
-#     # save tagged sequence to file
-#     filename = filenames[i].replace('.csv', '.tagged.csv')
-#     observation_sequences[i].save(tagged_sequences_dir + filename, include_state=True)
-# 
-# print "Training GMM-HMM model..."
-# n_components = 3
-# model = GMMHMM(n_components, n_mix=2, covariance_type="full", n_iter=100) # Multiple Gaussians (GMM) per State and Feature
-# model.fit(training_sequences)
-# 
-# # Save GMM HMM model to file
-# serialiser = HMMSerialiser(model, feature_names=adaptor.getFeatures())
-# serialiser.saveXML(model_dir + 'model_gmm.xml')
