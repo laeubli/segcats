@@ -170,7 +170,7 @@ if __name__ == "__main__":
     print "# ***"
     print
     print "# Plot the GMM of feature %s in state %s" % (feature_name, state_name)
-    print "plotGMM(%s.%s, feature_name=%s)" % (state_name, feature_name, feature_name)
+    print 'plotGMM(%s.%s, feature_name="%s")' % (state_name, feature_name, feature_name)
     print
     print "# Print all GMMs of state %s into a combined plot" % state_name
     print "plotGMMs(GMMs.%s, feature_names=feature_names)" % state_name

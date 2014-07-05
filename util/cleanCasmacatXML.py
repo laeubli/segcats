@@ -204,5 +204,7 @@ class CasmacatXMLIterator ( object ):
   
 # TEST DRIVER
 if __name__ == "__main__":
+    if not sys.argv[1]:
+        sys.exit('Usage: python cleanCasmacatXML.py "*.xml"')
     iterator = CasmacatXMLIterator(detailed=True)
-    iterator.process('/Users/sam/Documents/ausbildung/uni/msc_ai/thesis/Data/TPR Raw/CFT13/Translog-II/*.xml')   
+    iterator.process(sys.argv[1])

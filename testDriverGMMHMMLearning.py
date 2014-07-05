@@ -53,7 +53,7 @@ m_components = 2   # number of mixture components for first GMM model
 new_m = lambda m: m + 1 # function to increase m for subsequent GMM models
 num_GMM_models = 9 # number of GMM models to train (= number of iterations of steps 4.--7.)
 
-working_dir = "/Users/sam/Documents/ausbildung/uni/msc_ai/thesis/Models/GMMHMM/test/" # base working directory
+working_dir = "/Users/sam/Documents/ausbildung/uni/msc_ai/thesis/Models/GMMHMM/test2/" # base working directory
 training_data = working_dir + "training_observations/*.csv"
 
 covariance_type = 'full' # covariance type for HMM models
@@ -124,7 +124,7 @@ for i in range(num_GMM_models):
     for state_index in range(n_states):
         g = GMM( n_components=m_components,
                    covariance_type=covariance_type,
-                   n_iter=0, # this initialises the GMMs without optimising them through EM; this is done later in the GMM HMM model
+                   #n_iter=0, # this initialises the GMMs without optimising them through EM; this is done later in the GMM HMM model
                   ) # n_iter = 5(...) better??
         g.fit(observations_per_state[state_index])
         GMMs.append(g)
@@ -140,15 +140,16 @@ for i in range(num_GMM_models):
                         n_iter=num_EM_iterations,
                         init_params='' # initialisation through previous model and GMMs!
                        )
+    gmm_model.fit(training_sequences)
     # save base model
     print "\tSaving model to file..."
-    saveModel(gmm_model, 'gmm_model_%sstates' % m_components, observation_sequences[0].getFeatureNames())
+    saveModel(gmm_model, 'gmm_model_%scomponents' % m_components, observation_sequences[0].getFeatureNames())
     # tag training data using new model
     print "\tTagging training data using base model..."
     likelihood_of_training_data, observations_per_state = tagTrainingData( gmm_model, 
                                                                            training_sequences, 
                                                                            list(observation_sequences), # pass a copy 
-                                                                           save='gmm_model_%sstates/tagged_training_data' % m_components, 
+                                                                           save='gmm_model_%scomponents/tagged_training_data' % m_components, 
                                                                            filenames=filenames )
     print "\tTotal log lokelihood of the training data according to current model: %.4f" % likelihood_of_training_data
     # update meta parameters for next iteration
