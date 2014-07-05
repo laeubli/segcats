@@ -8,8 +8,7 @@ import sys
 import numpy as np
 
 from observation import Observation
-from fileIO import serialiseObservationSequence
-from fileIO.fileIO import readObservationSequence
+from fileIO.fileIO import *
 
 class ObservationSequence ( object ):
     '''

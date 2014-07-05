@@ -10,8 +10,8 @@ from fileIO import *
 
 #adaptor = XMLAdaptorSingleEventD('fixation')
 #adaptor = XMLAdaptorMultiDelay3(add_duration=True)
-adaptor = XMLAdaptorMultiWindow3(use_duration=True)
-observation_sequence = adaptor.convert('/Users/sam/Documents/ausbildung/uni/msc_ai/thesis/Data/TPR Raw/CFT13/Translog-II/P01_P11.xml')
+adaptor = XMLAdaptorMultiWindow3(use_duration=False)
+observation_sequence = adaptor.convert('/Users/sam/Documents/ausbildung/uni/msc_ai/thesis/Data/TPR Raw/CFT13/Translog-II/P07_P21.xml')
 #observation_sequence = adaptor.convert('test_log.xml')
 
 #print observation_sequence.getNumpyArray(replaceNone="TEST")[0]

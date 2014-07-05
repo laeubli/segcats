@@ -409,6 +409,24 @@ class HMMReader ( AbstractXMLReader ):
                 self._num_mixture_components = int( self._root.attrib['mixtureComponents'] )
         self._readObservationProbabilities()
     
+    def getFeatures ( self ):
+        """
+        Returns the feature names of this HMM.
+        @return list(str): the feature names
+        """
+        return self._features
+    
+    def getStates ( self, include_start_state=True ):
+        """
+        Returns the state names of this HMM.
+        @param include_start_state (bool): If False, 'START' will be excluded from the list of states
+        @return list(str): the state names
+        """
+        if include_start_state:
+            return self._states
+        else:
+            return self._states[1:]
+    
     def getModel ( self ):
         """
         Returns a HMM model of type sklearn.hmm.{Multinomial,Gaussian,GMM}, according
