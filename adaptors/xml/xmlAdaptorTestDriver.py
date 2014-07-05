@@ -10,7 +10,7 @@ from fileIO import *
 
 #adaptor = XMLAdaptorSingleEventD('fixation')
 #adaptor = XMLAdaptorMultiDelay3(add_duration=True)
-adaptor = XMLAdaptorMultiWindow3(use_duration=False)
+adaptor = XMLAdaptorMultiWindow3(use_duration=False, distinguish_keydowns=False)
 observation_sequence = adaptor.convert('/Users/sam/Documents/ausbildung/uni/msc_ai/thesis/Data/TPR Raw/CFT13/Translog-II/P07_P21.xml')
 #observation_sequence = adaptor.convert('test_log.xml')
 

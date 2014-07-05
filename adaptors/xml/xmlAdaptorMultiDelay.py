@@ -20,15 +20,19 @@ class XMLAdaptorMultiDelay1 ( AbstractXMLAdaptor ):
     The delay to the current event type is always 0.
     '''
     
-    def __init__ ( self, add_duration=False ):
+    def __init__ ( self, add_duration=False, distinguish_keydowns=True ):
         """
-        @param add_duration: If True, the end time of each observation will be set such
-            that it coincides with the next observation's start time. This can be helpful
-            for timeline visualisations.
+        @param add_duration (bool): If True, the end time of each observation will be set
+            such that it coincides with the next observation's start time. This can be
+            helpful for timeline visualisations.
+        @param distinguish_keydowns (bool): If True, keyDown events will be grouped into
+            Normal, Del, Ctrl, and Nav (see above); if False, a single keyDown feature
+            will be used.
         """
         events = ['keyDown']
         events += ['startSession']
         self._add_duration = add_duration
+        self._distinguish_keydowns = distinguish_keydowns
         self._prev_event_start_time = None
         AbstractXMLAdaptor.__init__ ( self, events=events, parametrisation='event-based' )
         # Constants
@@ -36,7 +40,10 @@ class XMLAdaptorMultiDelay1 ( AbstractXMLAdaptor ):
         self._DELETE_KEY_CODES = [8, 46] # backspace, delete
         self._NAVIGATION_KEY_CODES = [33, 34, 35, 36, 37, 38, 39, 40] # page up, page down, end, home, left arrow, up arrow, right arrow, down arrow
         # features
-        self._feature_names = ['keyDownNormal', 'keyDownDel', 'keyDownCtrl', 'keyDownNav']
+        if self._distinguish_keydowns:
+            self._feature_names = ['keyDownNormal', 'keyDownDel', 'keyDownCtrl', 'keyDownNav']
+        else:
+            self._feature_names = ['keyDown']
     
     def _processNode ( self, node ):
         start = int( node.get('time') )
@@ -85,18 +92,21 @@ class XMLAdaptorMultiDelay1 ( AbstractXMLAdaptor ):
     def _updateDelayKeyDown ( self, node ):
         key_code = int( node.get('which') )
         timestamp = int( node.get('time') )
-        if key_code in self._CONTROL_KEY_CODES:
-            # control key event
-            self._time_elapsed['keyDownCtrl'] = timestamp
-        elif key_code in self._DELETE_KEY_CODES:
-            # delete key event
-            self._time_elapsed['keyDownDel'] = timestamp
-        elif key_code in self._NAVIGATION_KEY_CODES:
-            # navigation key event
-            self._time_elapsed['keyDownNav'] = timestamp
+        if self._distinguish_keydowns:
+            if key_code in self._CONTROL_KEY_CODES:
+                # control key event
+                self._time_elapsed['keyDownCtrl'] = timestamp
+            elif key_code in self._DELETE_KEY_CODES:
+                # delete key event
+                self._time_elapsed['keyDownDel'] = timestamp
+            elif key_code in self._NAVIGATION_KEY_CODES:
+                # navigation key event
+                self._time_elapsed['keyDownNav'] = timestamp
+            else:
+                # alphanumeric, interpunctuation, or any other key event
+                self._time_elapsed['keyDownNormal'] = timestamp
         else:
-            # alphanumeric, interpunctuation, or any other key event
-            self._time_elapsed['keyDownNormal'] = timestamp
+            self._time_elapsed['keyDown'] = timestamp
 
 
 class XMLAdaptorMultiDelay2 ( XMLAdaptorMultiDelay1 ):
@@ -105,8 +115,8 @@ class XMLAdaptorMultiDelay2 ( XMLAdaptorMultiDelay1 ):
         - time since last mouse click (mouseDown event)
     """
     
-    def __init__ ( self, add_duration=False ):
-        XMLAdaptorMultiDelay1.__init__( self, add_duration )
+    def __init__ ( self, add_duration=False, distinguish_keydowns=True ):
+        XMLAdaptorMultiDelay1.__init__( self, add_duration, distinguish_keydowns )
         self._events += ['mouseDown']
         self._feature_names += ['mouseDown']
     
@@ -128,8 +138,8 @@ class XMLAdaptorMultiDelay3 ( XMLAdaptorMultiDelay2 ):
         - time since last eye fixation on target text
     """
     
-    def __init__ ( self, add_duration=False ):
-        XMLAdaptorMultiDelay2.__init__( self, add_duration )
+    def __init__ ( self, add_duration=False, distinguish_keydowns=True ):
+        XMLAdaptorMultiDelay2.__init__( self, add_duration, distinguish_keydowns )
         self._events += ['fixation']
         self._feature_names += ['fixationSource', 'fixationTarget']
         self._SOURCE_WINDOW = 1

@@ -23,24 +23,31 @@ class XMLAdaptorMultiWindow1 ( AbstractXMLAdaptor ):
         - number of keyDown arrow (left, right, up, down)
     '''
     
-    def __init__ ( self, window_length=5000, use_duration=True ):
+    def __init__ ( self, window_length=5000, use_duration=True, distinguish_keydowns=True ):
         """
         @param window_length (int): The length of the window in which counts will be
             aggregated, in milliseconds.
         @param use_duration (bool): If true, the observation value for all event types
             that have a duration attribute will be the cumulated duration of all obser-
             vations per window; normal counts are used otherwise.
+        @param distinguish_keydowns (bool): If True, keyDown events will be grouped into
+            Normal, Del, Ctrl, and Nav (see above); if False, a single keyDown feature
+            will be used.
         """
         events = ['keyDown']
         events += ['startSession', 'stopSession'] # as we consider subsessions in the logs
         self._use_duration = use_duration
+        self._distinguish_keydowns = distinguish_keydowns
         AbstractXMLAdaptor.__init__ ( self, events=events, parametrisation='window-based', window_length=window_length )
         # constants
         self._CONTROL_KEY_CODES = [17, 18] # ctrl, alt
         self._DELETE_KEY_CODES = [8, 46] # backspace, delete
         self._NAVIGATION_KEY_CODES = [33, 34, 35, 36, 37, 38, 39, 40] # page up, page down, end, home, left arrow, up arrow, right arrow, down arrow
         # features
-        self._feature_names = ['keyDownNormal', 'keyDownDel', 'keyDownCtrl', 'keyDownNav']
+        if self._distinguish_keydowns:
+            self._feature_names = ['keyDownNormal', 'keyDownDel', 'keyDownCtrl', 'keyDownNav']
+        else:
+            self._feature_names = ['keyDown']
     
     def convert ( self, xml_filepath ):
         '''
@@ -79,19 +86,22 @@ class XMLAdaptorMultiWindow1 ( AbstractXMLAdaptor ):
     
     def _getEventType ( self, node ):
         if node.tag == 'keyDown':
-            key_code = int( node.get('which') )
-            if key_code in self._CONTROL_KEY_CODES:
-                # control key event
-                return 'keyDownCtrl'
-            elif key_code in self._DELETE_KEY_CODES:
-                # delete key event
-                return 'keyDownDel'
-            elif key_code in self._NAVIGATION_KEY_CODES:
-                # navigation key event
-                return 'keyDownNav'
+            if self._distinguish_keydowns:
+                key_code = int( node.get('which') )
+                if key_code in self._CONTROL_KEY_CODES:
+                    # control key event
+                    return 'keyDownCtrl'
+                elif key_code in self._DELETE_KEY_CODES:
+                    # delete key event
+                    return 'keyDownDel'
+                elif key_code in self._NAVIGATION_KEY_CODES:
+                    # navigation key event
+                    return 'keyDownNav'
+                else:
+                    # alphanumeric, interpunctuation, or any other key event
+                    return 'keyDownNormal'
             else:
-                # alphanumeric, interpunctuation, or any other key event
-                return 'keyDownNormal'
+                return 'keyDown'
     
     def _getObservationSequence ( self ):
         """
@@ -136,26 +146,29 @@ class XMLAdaptorMultiWindow2 ( XMLAdaptorMultiWindow1 ):
         - number of mouse clicks (mouseDown event)
     """
      
-    def __init__ ( self, window_length=5000, use_duration=True ):
-        XMLAdaptorMultiWindow1.__init__( self, window_length=window_length, use_duration=use_duration )
+    def __init__ ( self, window_length=5000, use_duration=True, distinguish_keydowns=True ):
+        XMLAdaptorMultiWindow1.__init__( self, window_length=window_length, use_duration=use_duration, distinguish_keydowns=distinguish_keydowns )
         self._events += ['mouseDown']
         self._feature_names += ['mouseDown']
      
     def _getEventType ( self, node ):
         if node.tag == 'keyDown':
-            key_code = int( node.get('which') )
-            if key_code in self._CONTROL_KEY_CODES:
-                # control key event
-                return 'keyDownCtrl'
-            elif key_code in self._DELETE_KEY_CODES:
-                # delete key event
-                return 'keyDownDel'
-            elif key_code in self._NAVIGATION_KEY_CODES:
-                # navigation key event
-                return 'keyDownNav'
+            if self._distinguish_keydowns:
+                key_code = int( node.get('which') )
+                if key_code in self._CONTROL_KEY_CODES:
+                    # control key event
+                    return 'keyDownCtrl'
+                elif key_code in self._DELETE_KEY_CODES:
+                    # delete key event
+                    return 'keyDownDel'
+                elif key_code in self._NAVIGATION_KEY_CODES:
+                    # navigation key event
+                    return 'keyDownNav'
+                else:
+                    # alphanumeric, interpunctuation, or any other key event
+                    return 'keyDownNormal'
             else:
-                # alphanumeric, interpunctuation, or any other key event
-                return 'keyDownNormal'
+                return 'keyDown'
         elif node.tag == 'mouseDown':
             # mouseDown event
             return 'mouseDown'
@@ -168,8 +181,8 @@ class XMLAdaptorMultiWindow3 ( XMLAdaptorMultiWindow2 ):
         - count (or duration) of eye fixation on target text
     """
      
-    def __init__ ( self, window_length=5000, use_duration=True ):
-        XMLAdaptorMultiWindow2.__init__( self, window_length=window_length, use_duration=use_duration )
+    def __init__ ( self, window_length=5000, use_duration=True, distinguish_keydowns=True ):
+        XMLAdaptorMultiWindow2.__init__( self, window_length=window_length, use_duration=use_duration, distinguish_keydowns=distinguish_keydowns )
         self._events += ['fixation']
         self._feature_names += ['fixationSource', 'fixationTarget']
         self._SOURCE_WINDOW = 1
@@ -178,19 +191,22 @@ class XMLAdaptorMultiWindow3 ( XMLAdaptorMultiWindow2 ):
     def _getEventType ( self, node ):
         # keyDown
         if node.tag == 'keyDown':
-            key_code = int( node.get('which') )
-            if key_code in self._CONTROL_KEY_CODES:
-                # control key event
-                return 'keyDownCtrl'
-            elif key_code in self._DELETE_KEY_CODES:
-                # delete key event
-                return 'keyDownDel'
-            elif key_code in self._NAVIGATION_KEY_CODES:
-                # navigation key event
-                return 'keyDownNav'
+            if self._distinguish_keydowns:
+                key_code = int( node.get('which') )
+                if key_code in self._CONTROL_KEY_CODES:
+                    # control key event
+                    return 'keyDownCtrl'
+                elif key_code in self._DELETE_KEY_CODES:
+                    # delete key event
+                    return 'keyDownDel'
+                elif key_code in self._NAVIGATION_KEY_CODES:
+                    # navigation key event
+                    return 'keyDownNav'
+                else:
+                    # alphanumeric, interpunctuation, or any other key event
+                    return 'keyDownNormal'
             else:
-                # alphanumeric, interpunctuation, or any other key event
-                return 'keyDownNormal'
+                return 'keyDown'
         # mouseDown
         elif node.tag == 'mouseDown':
             # mouseDown event
