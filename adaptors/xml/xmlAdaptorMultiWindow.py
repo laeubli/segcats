@@ -23,7 +23,7 @@ class XMLAdaptorMultiWindow1 ( AbstractXMLAdaptor ):
         - number of keyDown arrow (left, right, up, down)
     '''
     
-    def __init__ ( self, window_length=5000, use_duration=True, distinguish_keydowns=True ):
+    def __init__ ( self, window_length=5000, use_duration=False, distinguish_keydowns=True ):
         """
         @param window_length (int): The length of the window in which counts will be
             aggregated, in milliseconds.
@@ -146,7 +146,7 @@ class XMLAdaptorMultiWindow2 ( XMLAdaptorMultiWindow1 ):
         - number of mouse clicks (mouseDown event)
     """
      
-    def __init__ ( self, window_length=5000, use_duration=True, distinguish_keydowns=True ):
+    def __init__ ( self, window_length=5000, use_duration=False, distinguish_keydowns=True ):
         XMLAdaptorMultiWindow1.__init__( self, window_length=window_length, use_duration=use_duration, distinguish_keydowns=distinguish_keydowns )
         self._events += ['mouseDown']
         self._feature_names += ['mouseDown']
@@ -181,7 +181,7 @@ class XMLAdaptorMultiWindow3 ( XMLAdaptorMultiWindow2 ):
         - count (or duration) of eye fixation on target text
     """
      
-    def __init__ ( self, window_length=5000, use_duration=True, distinguish_keydowns=True ):
+    def __init__ ( self, window_length=5000, use_duration=False, distinguish_keydowns=True ):
         XMLAdaptorMultiWindow2.__init__( self, window_length=window_length, use_duration=use_duration, distinguish_keydowns=distinguish_keydowns )
         self._events += ['fixation']
         self._feature_names += ['fixationSource', 'fixationTarget']
@@ -213,12 +213,21 @@ class XMLAdaptorMultiWindow3 ( XMLAdaptorMultiWindow2 ):
             return 'mouseDown'
         # fixation
         elif node.tag == 'fixation':
-            window = int( node.get('window') )
-            if window == self._SOURCE_WINDOW:
-                # eye fixation on source text
-                return 'fixationSource'
-            elif window == self._TARGET_WINDOW:
-                # eye fixation on target window
-                return 'fixationTarget'
-            else:
-                return None # e.g., if window == 0 (unresolved eye fixation?)
+            try:
+                window = int( node.get('window') )
+                if window == self._SOURCE_WINDOW:
+                    # eye fixation on source text
+                    return 'fixationSource'
+                elif window == self._TARGET_WINDOW:
+                    # eye fixation on target window
+                    return 'fixationTarget'
+                else:
+                    return None # e.g., if window == 0 (unresolved eye fixation?)
+            except TypeError:
+                # post CFT13 format does not store a window attribute anymore
+                if 'source' in node.get('elementID'):
+                    return 'fixationSource'
+                elif 'editarea' in node.get('elementID'):
+                    return 'fixationTarget'
+                else:
+                    return None # unresolved eye fixation

@@ -154,11 +154,20 @@ class XMLAdaptorMultiDelay3 ( XMLAdaptorMultiDelay2 ):
             self._updateDelayFixation(node)
     
     def _updateDelayFixation ( self, node ):
-        window = int( node.get('window') )
         timestamp = int( node.get('time') )
-        if window == self._SOURCE_WINDOW:
-            # eye fixation on source text
-            self._time_elapsed['fixationSource'] = timestamp
-        elif window == self._TARGET_WINDOW:
-            # eye fixation on target text
-            self._time_elapsed['fixationTarget'] = timestamp
+        try:
+            window = int( node.get('window') )
+            if window == self._SOURCE_WINDOW:
+                # eye fixation on source text
+                self._time_elapsed['fixationSource'] = timestamp
+            elif window == self._TARGET_WINDOW:
+                # eye fixation on target text
+                self._time_elapsed['fixationTarget'] = timestamp
+        except TypeError:
+            # post CFT13 format does not store a window attribute anymore
+            if 'source' in node.get('elementID'):
+                # eye fixation on source text
+                self._time_elapsed['fixationSource'] = timestamp
+            elif 'editarea' in node.get('elementID'):
+                # eye fixation on target text
+                self._time_elapsed['fixationTarget'] = timestamp
