@@ -165,9 +165,9 @@ class XMLAdaptorMultiDelay3 ( XMLAdaptorMultiDelay2 ):
                 self._time_elapsed['fixationTarget'] = timestamp
         except TypeError:
             # post CFT13 format does not store a window attribute anymore
-            if 'source' in node.get('elementID'):
+            if 'source' in node.get('elementId'):
                 # eye fixation on source text
                 self._time_elapsed['fixationSource'] = timestamp
-            elif 'editarea' in node.get('elementID'):
+            elif 'editarea' in node.get('elementId'):
                 # eye fixation on target text
                 self._time_elapsed['fixationTarget'] = timestamp

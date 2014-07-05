@@ -225,9 +225,9 @@ class XMLAdaptorMultiWindow3 ( XMLAdaptorMultiWindow2 ):
                     return None # e.g., if window == 0 (unresolved eye fixation?)
             except TypeError:
                 # post CFT13 format does not store a window attribute anymore
-                if 'source' in node.get('elementID'):
+                if 'source' in node.get('elementId'):
                     return 'fixationSource'
-                elif 'editarea' in node.get('elementID'):
+                elif 'editarea' in node.get('elementId'):
                     return 'fixationTarget'
                 else:
                     return None # unresolved eye fixation
