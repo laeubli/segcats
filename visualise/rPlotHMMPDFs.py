@@ -60,34 +60,63 @@ plotGMMs <- function(gmms, xmax=F, feature_names=F) {
   }
   
 }
+
+plotGMMsTogether <- function(gmms, GMM_name=F, feature_names=F, colors=F) {
   
-plotGMM <- function(gmm, xmax=F, feature_name="") {
-  ### Plots a Gaussian mixture model stored in @param gmm
-  ### @param gmm: a data.frame containing three columns: mean, variance, weight
-  ### ---
-  ### Example:
-  ### gmm = data.frame( mean = c(3.13, 15.58, 39.06, 125.99)  )
-  ### gmm$variance = c(168.75, 168.75, 168.75, 168.75)
-  ### gmm$weight = c(0.25, 0.25, 0.25, 0.25)
-  ### plotGMM(gmm)
+  # Define colors for features
+  require(RColorBrewer)
+  if (colors==F) {
+    colors = brewer.pal(length(gmms), "Set1")
+  }
   
-  # define GMM probability density function (PDF)
-  gmmf <- function(x) {
-    y = 0
-    for (i in 1:length(gmm$mean)) {
-      y = y + gmm$weight[i] * dnorm(x, mean=gmm$mean[i], sd=sqrt(gmm$variance[i]))
+  # first pass: find maximum x and y values for plot
+  xmax = 1.0
+  ymax = 0.0
+  for (i in 1:length(gmms)) {
+    gmm = data.frame(gmms[i])
+    gmmf <- function(x) {
+      y = 0
+      for (i in 1:length(gmm$mean)) {
+        y = y + gmm$weight[i] * dnorm(x, mean=gmm$mean[i], sd=sqrt(gmm$variance[i]))
+      }
+      return(y)
     }
-    return(y)
+    samples = data.frame(x=c(0:1000))
+    samples$y = sapply(samples$x, gmmf)
+    current_xmax = max(samples[samples$y>0.01,])
+    if (current_xmax > xmax && current_xmax != Inf) {
+      xmax = current_xmax
+    }
+    current_ymax = max(samples$y)
+    if (current_ymax > ymax && current_ymax != Inf) {
+      ymax = current_ymax
+    }
   }
   
-  # set upper x limit for the plot (if not given)
-  if (xmax==F) {
-    # take highest mean plus twice its standard deviation as x max
-    i = max(order(gmm$mean))
-    xmax = gmm$mean[i]
-    xmax = xmax + 2 * sqrt(gmm$variance[i])
+  # second pass: find maximum x and y values for plot
+  for (i in 1:length(gmms)) {
+    gmm = data.frame(gmms[i])
+    gmmf <- function(x) {
+      y = 0
+      for (i in 1:length(gmm$mean)) {
+        y = y + gmm$weight[i] * dnorm(x, mean=gmm$mean[i], sd=sqrt(gmm$variance[i]))
+      }
+      return(y)
+    }
+    add = ifelse(i==1, FALSE, TRUE)
+    par(mfrow=c(1,1))
+    plot(gmmf, xlim=c(0,xmax), ylim=c(0,ymax), ylab="Density", xlab="Observation", col=colors[i], add=add)
+    if (i==1) {
+      # add main title
+      if (GMM_name != F) {
+        title(main=GMM_name)
+      }
+      # add legend
+      if (typeof(feature_names) != 'logical') {
+        legend("topright", feature_names, lty = c(1,1), title="Features", col=colors)
+      }
+    }
   }
-  plot(gmmf, xlim=c(0,xmax), ylab="Density", xlab="Observation", main=feature_name)
   
 }
   
@@ -174,4 +203,7 @@ if __name__ == "__main__":
     print
     print "# Print all GMMs of state %s into a combined plot" % state_name
     print "plotGMMs(GMMs.%s, feature_names=feature_names)" % state_name
+    print
+    print "# Print all GMMs of state %s into a single plot" % state_name
+    print "plotGMMsTogether(GMMs.%s, GMM_name='%s', feature_names=feature_names)" % (state_name, state_name)
     print
