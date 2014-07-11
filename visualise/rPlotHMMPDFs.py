@@ -61,7 +61,7 @@ plotGMMs <- function(gmms, xmax=F, feature_names=F) {
   
 }
 
-plotGMMsTogether <- function(gmms, GMM_name=F, feature_names=F, colors=F) {
+plotGMMsTogether <- function(gmms, GMM_name=F, feature_names=F, colors=F, xmax=F, ymax=F) {
   
   # Define colors for features
   require(RColorBrewer)
@@ -70,8 +70,8 @@ plotGMMsTogether <- function(gmms, GMM_name=F, feature_names=F, colors=F) {
   }
   
   # first pass: find maximum x and y values for plot
-  xmax = 1.0
-  ymax = 0.0
+  xmax = ifelse(xmax==F, 1.0, xmax)
+  ymax = ifelse(ymax==F, 0.0, ymax)
   for (i in 1:length(gmms)) {
     gmm = data.frame(gmms[i])
     gmmf <- function(x) {
@@ -84,11 +84,11 @@ plotGMMsTogether <- function(gmms, GMM_name=F, feature_names=F, colors=F) {
     samples = data.frame(x=c(0:1000))
     samples$y = sapply(samples$x, gmmf)
     current_xmax = max(samples[samples$y>0.01,])
-    if (current_xmax > xmax && current_xmax != Inf) {
+    if (xmax != F && current_xmax > xmax && current_xmax != Inf) {
       xmax = current_xmax
     }
     current_ymax = max(samples$y)
-    if (current_ymax > ymax && current_ymax != Inf) {
+    if (ymax != F && current_ymax > ymax && current_ymax != Inf) {
       ymax = current_ymax
     }
   }
