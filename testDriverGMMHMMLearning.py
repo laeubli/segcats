@@ -53,8 +53,8 @@ m_components = 2   # number of mixture components for first GMM model
 new_m = lambda m: m + 1 # function to increase m for subsequent GMM models
 num_GMM_models = 9 # number of GMM models to train (= number of iterations of steps 4.--7.)
 
-working_dir = "/Users/sam/Documents/ausbildung/uni/msc_ai/thesis/Models/GMMHMM/test2/" # base working directory
-training_data = working_dir + "training_observations/*.csv"
+working_dir = "/Users/sam/Documents/ausbildung/uni/msc_ai/thesis/Models/GMMHMM/test4/" # base working directory
+training_data = "/Users/sam/Documents/ausbildung/uni/msc_ai/thesis/Models/TrainingData/CFT14/WindowBased2/*.csv"
 
 covariance_type = 'full' # covariance type for HMM models
 num_EM_iterations = 5 # number of iterations for each EM training step (will be replaced by prob. increase threshold)

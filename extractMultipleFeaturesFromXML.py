@@ -57,4 +57,7 @@ if __name__ == "__main__":
     for file_path in source:
         observation_sequence = adaptor.convert(file_path)
         output_path = output_dir + os.path.basename(file_path) + '.csv'
-        observation_sequence.save(output_path)
+        try:
+            observation_sequence.save(output_path)
+        except AttributeError:
+            pass # a warning will be issued in this case
