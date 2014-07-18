@@ -94,6 +94,11 @@ def writeRDataset ( stats_file, tagged_observation_sequences, filenames, window_
     all_state_phases = [] # number of coherent sequences (phases) per state, i.e., 11102200 => {0:2, 1:1, 2:1}
     all_state_phases_15min = [] # as above, in first 15 minutes of the session
     for i, tagged_observation_sequence in enumerate(tagged_observation_sequences):
+        # !!!
+        # TODO: THIS IS TOO SIMPLE
+        # REMEMBER THAT SESSIONS CAN BE STARTED/STOPPED ANYTIME
+        # INCREASE ACTUAL DURATION BY COUNTING EACH OBSERVATION'S DURATION
+        # !!!
         # counters
         state_occ = defaultdict(int) # number of observations tagged as state X
         state_occ_15min = defaultdict(int) # as above, in first 15 minutes the session
@@ -101,15 +106,18 @@ def writeRDataset ( stats_file, tagged_observation_sequences, filenames, window_
         state_phases_15min = defaultdict(int) # as above, in first 15 minutes of the session
         # aggregation
         observations = tagged_observation_sequence.get()
-        timestamp_start_plus_15min = observations[0].getStart() + 15*60*1000
+        #timestamp_start_plus_15min = observations[0].getStart() + 15*60*1000
+        accumulated_time_in_ms = 0
         prev_state = None
+        min15_in_ms = 15*60*1000
         min15_mark_passed = False
         for observation in observations:
+            accumulated_time_in_ms += observation.getEnd() - observation.getStart()
             current_state = observation.getState()
             state_occ[current_state] += 1
             if current_state != prev_state and prev_state != None:
                 state_phases[prev_state] += 1
-            if observation.getEnd() <= timestamp_start_plus_15min:
+            if observation.getEnd() <= min15_in_ms: # 15 minutes in ms
                 state_occ_15min[current_state] += 1
                 if current_state != prev_state and prev_state != None:
                     state_phases_15min[prev_state] += 1
@@ -119,11 +127,11 @@ def writeRDataset ( stats_file, tagged_observation_sequences, filenames, window_
             prev_state = current_state
         # fix for last observation in sequence
         state_phases[current_state] += 1
-        if observation.getEnd() <= timestamp_start_plus_15min:
+        if observation.getEnd() <= min15_in_ms: # 15 minutes in ms
             state_phases_15min[current_state] += 1
         # store values
         filename.append(filenames[i])
-        time.append( observations[-1].getEnd() - observations[0].getStart() )
+        time.append( accumulated_time_in_ms )
         all_state_occ.append(state_occ)
         all_state_occ_15min.append(state_occ_15min)
         all_state_phases.append(state_phases)
@@ -215,7 +223,6 @@ logprob_file.write(logprob_file_header)
 # start global file data.R
 stats_file = open(os.path.join(base_dir_output, 'data.R'), 'w')
 stats_file_header  = "# Basic aggregations for segcats experiment series\n\n"
-stats_file_header += "setwd('%s')\n" % base_dir_output
 stats_file.write(stats_file_header)
 
 # THE LOOP
