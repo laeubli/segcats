@@ -61,7 +61,7 @@ else:
     sys.exit("Usage: unsupervisedTrainingPipeline.py base_dir_input base_dir_output")
 
 # CONSTANTS
-BASE_SCRIPT_FULL_PAHT = "/Users/sam/Documents/ausbildung/uni/msc_ai/thesis/Code/segcats/unsupervisedTraining.py"
+BASE_SCRIPT_FULL_PAHT = os.path.join( os.path.dirname(os.path.realpath(__file__)), "unsupervisedTraining.py")
 MAX_NUM_STATES = 10 # max. number of HMM states
 MAX_NUM_COMP = 10 # max. number of GMM mixture components
 COVARIANCE_TYPE = 'full' # covariance type for GMMs (diag or full)
