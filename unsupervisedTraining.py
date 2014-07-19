@@ -46,13 +46,14 @@ def saveModel ( model, path, feature_names=None, filename="model.xml" ):
     serialiser = HMMSerialiser(model, feature_names=feature_names)
     serialiser.saveXML(os.path.join(path, filename))
 
-def writeLogprob ( logprob_file, total_likelihood_of_training_data, window_length, adaptor, num_states, num_comp, covariance_type ):
+def writeLogprob ( logprob_file_path, total_likelihood_of_training_data, window_length, adaptor, num_states, num_comp, covariance_type ):
     """
     Writes the total likelihood of the training data @param
     total_likelihood_of_training_data to @param logprob_file.
     """
-    logprob_file_entry = ",".join([window_length, adaptor, str(num_states), str(num_comp), covariance_type, str(total_likelihood_of_training_data)])
-    logprob_file.write(logprob_file_entry + "\n")
+    with open(logprob_file_path, 'a') as logprob_file:
+        logprob_file_entry = ",".join([window_length, adaptor, str(num_states), str(num_comp), covariance_type, str(total_likelihood_of_training_data)])
+        logprob_file.write(logprob_file_entry + "\n")
 
 def tagTrainingData ( model, training_sequences, observation_sequences):
     """
@@ -70,19 +71,19 @@ def tagTrainingData ( model, training_sequences, observation_sequences):
             observation.setState( "H%s" % state )
     return likelihood_of_training_data, observation_sequences
 
-def saveTaggedSequences ( tagged_observation_sequences, filenames, output_dir ):
+def saveTaggedSequences ( path_out, tagged_observation_sequences, filenames, output_dir ):
     """
     Saves the tagged observation sequences in @param tagged_observation_sequences
     to a .csv file each, under a new folder named "tagged_training_data" in
     @param output_dir.
     """
-    output_dir = os.path.join(base_path_out, 'tagged_training_data')
+    output_dir = os.path.join(path_out, 'tagged_training_data')
     mkdir_p(output_dir)
     for i, tagged_observation_sequence in enumerate(tagged_observation_sequences):
         filename = filenames[i].replace('.csv', '.tagged.csv')
         tagged_observation_sequence.save(os.path.join(output_dir, filename), include_state=True)
 
-def writeRDataset ( stats_file, tagged_observation_sequences, filenames, window_length, adaptor, num_states, num_comp, covariance_type ):
+def writeRDataset ( stats_file_path, tagged_observation_sequences, filenames, window_length, adaptor, num_states, num_comp, covariance_type ):
     """
     Aggregates information on @param tagged_observation_sequences into an R dataset
     for further analysis. The dataset is appended to @param stats_file.
@@ -159,7 +160,8 @@ def writeRDataset ( stats_file, tagged_observation_sequences, filenames, window_
         r_code += "%s$%s <- %s " % (dataframe_name, "%s.phases.15min" % state_name, getRVector(occ[state_name] for occ in all_state_phases_15min))
         r_code += "# number of coherent %s phases in the first 15 minutes of the session\n" % state_name
     # write R code to file
-    stats_file.write(r_code + "\n")
+    with open(stats_file_path, 'a') as stats_file:
+        stats_file.write(r_code + "\n")
     
 def getRVector ( any_list, to_string=False ):
     """
@@ -175,83 +177,44 @@ def getRVector ( any_list, to_string=False ):
         return "c(%s)" % content
 
 """
-Unsupervised training of GMM HMM models with the following parameters:
+Unsupervised training of *one* GMM HMM model with the parameters provided through sys.argv
     - window length
     - adaptor type
     - number of states
     - number of GMM components per state
 
-For each combination of the above parameters, this script stores
-    - the model parameters (model.xml)
-    - the tagged training sequences
-    - the log likelihood of the training data (in the global file logprob.csv)
-    - an R dataset for statistical analysis (in the global file data.R)
-
 Usage: unsupervisedTrainingPipeline.py base_dir_input base_dir_output
-input_dir has the following structure of subdirectories:
-- 500ms
-- 1000ms
-- ...
-    - Adaptor1
-    - Adaptor2
-    - ...
-        - training_sequence1.csv
-        - training_sequence2.csv
-        - ...
 """
 
-if len(sys.argv) == 3:
-    base_dir_input = sys.argv[1]
-    base_dir_output = sys.argv[2]
+if len(sys.argv) == 10:
+    path_training_data = sys.argv[1] # e.g., '*.csv' (including the quotes!)
+    path_out = sys.argv[2]
+    path_logprob_file = sys.argv[3]
+    path_data_file = sys.argv[4]
+    window_length = sys.argv[5]
+    adaptor = sys.argv[6]
+    n_states = int(sys.argv[7])
+    n_comp = int(sys.argv[8])
+    covariance_type = sys.argv[9]
 else:
-    sys.exit("Usage: unsupervisedTrainingPipeline.py base_dir_input base_dir_output")
+    sys.exit("Usage: unsupervisedTraining.py 'path_training_data' path_out path_logprob_file path_data_file window_length adaptor n_states n_comp covariance_type")
 
-# CONSTANTS
-MAX_NUM_STATES = 10 # max. number of HMM states
-MAX_NUM_COMP = 10 # max. number of GMM mixture components
-COVARIANCE_TYPE = 'full' # covariance type for GMMs (diag or full)
-
-# start global file logprob.csv
-logprob_file = open(os.path.join(base_dir_output, 'logprob.csv'), 'w')
-logprob_file_header = "window_length,adaptor,states,components,covariance_type,logprob\n"
-logprob_file.write(logprob_file_header)
-# start global file data.R
-stats_file = open(os.path.join(base_dir_output, 'data.R'), 'w')
-stats_file_header  = "# Basic aggregations for segcats experiment series\n\n"
-stats_file.write(stats_file_header)
-
-# THE LOOP
-# Iterate over window lengths
-for window_length in getSubdirectories(base_dir_input):
-    print "Window length: %s" % window_length
-    # Iterate over adaptor types
-    for adaptor in getSubdirectories(os.path.join(base_dir_input, window_length)):
-        print "\tAdaptor: %s" % adaptor
-        base_path_in = os.path.join(base_dir_input, window_length, adaptor)
-        # read training observation sequences
-        observation_sequences, filenames = readObservationSequences(os.path.join(base_path_in, '*.csv'), return_filenames=True)
-        feature_names = observation_sequences[0].getFeatureNames()
-        training_sequences = [ observation_sequence.getNumpyArray() for observation_sequence in observation_sequences ]
-        # Iterate over number of hidden states
-        for num_states in range(2, MAX_NUM_STATES+1):
-            # Iterate over number of GMM mixture components
-            for num_comp in range(1, MAX_NUM_COMP+1):
-                print "\t\t Training model with %s hidden states and %s mixture components" % (num_states, num_comp)
-                # create a new folder for this configuration
-                base_path_out = os.path.join(base_dir_output, window_length, adaptor, "%s_states" % num_states, "%s_comp" % num_comp )
-                mkdir_p(base_path_out)
-                # train model
-                model = trainModel(training_sequences, num_states, num_comp, COVARIANCE_TYPE)
-                # save model
-                saveModel(model, base_path_out, feature_names)
-                # tag training data and get total likelihood
-                total_likelihood_of_training_data, tagged_observation_sequences = tagTrainingData(model, training_sequences, observation_sequences)
-                # save tagged training data
-                saveTaggedSequences(tagged_observation_sequences, filenames, base_path_out)
-                # write logprob to file
-                writeLogprob(logprob_file, total_likelihood_of_training_data, window_length, adaptor, num_states, num_comp, COVARIANCE_TYPE)
-                # write basic aggregations for further processing in R to file
-                writeRDataset(stats_file, tagged_observation_sequences, filenames, window_length, adaptor, num_states, num_comp, COVARIANCE_TYPE)
-
-logprob_file.close()
-stats_file.close()
+# read training observation sequences
+print path_training_data
+observation_sequences, filenames = readObservationSequences(path_training_data, return_filenames=True)
+feature_names = observation_sequences[0].getFeatureNames()
+training_sequences = [ observation_sequence.getNumpyArray() for observation_sequence in observation_sequences ]
+# create a new folder for this configuration
+mkdir_p(path_out)
+# train model
+model = trainModel(training_sequences, n_states, n_comp, covariance_type)
+# save model
+saveModel(model, path_out, feature_names)
+# tag training data and get total likelihood
+total_likelihood_of_training_data, tagged_observation_sequences = tagTrainingData(model, training_sequences, observation_sequences)
+# save tagged training data
+saveTaggedSequences(path_out, tagged_observation_sequences, filenames, path_out)
+# write logprob to file
+writeLogprob(path_logprob_file, total_likelihood_of_training_data, window_length, adaptor, n_states, n_comp, covariance_type)
+# write basic aggregations for further processing in R to file
+writeRDataset(path_data_file, tagged_observation_sequences, filenames, window_length, adaptor, n_states, n_comp, covariance_type)
