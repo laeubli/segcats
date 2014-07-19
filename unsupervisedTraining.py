@@ -200,7 +200,6 @@ else:
     sys.exit("Usage: unsupervisedTraining.py 'path_training_data' path_out path_logprob_file path_data_file window_length adaptor n_states n_comp covariance_type")
 
 # read training observation sequences
-print path_training_data
 observation_sequences, filenames = readObservationSequences(path_training_data, return_filenames=True)
 feature_names = observation_sequences[0].getFeatureNames()
 training_sequences = [ observation_sequence.getNumpyArray() for observation_sequence in observation_sequences ]
