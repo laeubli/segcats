@@ -186,7 +186,7 @@ Unsupervised training of *one* GMM HMM model with the parameters provided throug
 Usage: unsupervisedTrainingPipeline.py base_dir_input base_dir_output
 """
 
-if len(sys.argv) == 10:
+if len(sys.argv) == 11:
     path_training_data = sys.argv[1] # e.g., '*.csv' (including the quotes!)
     path_out = sys.argv[2]
     path_logprob_file = sys.argv[3]
