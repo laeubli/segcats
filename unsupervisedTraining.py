@@ -46,13 +46,13 @@ def saveModel ( model, path, feature_names=None, filename="model.xml" ):
     serialiser = HMMSerialiser(model, feature_names=feature_names)
     serialiser.saveXML(os.path.join(path, filename))
 
-def writeLogprob ( logprob_file_path, total_likelihood_of_training_data, window_length, adaptor, num_states, num_comp, covariance_type ):
+def writeLogprob ( logprob_file_path, total_likelihood_of_training_data, window_length, adaptor, num_states, num_comp, run, covariance_type ):
     """
     Writes the total likelihood of the training data @param
     total_likelihood_of_training_data to @param logprob_file.
     """
     with open(logprob_file_path, 'a') as logprob_file:
-        logprob_file_entry = ",".join([window_length, adaptor, str(num_states), str(num_comp), covariance_type, str(total_likelihood_of_training_data)])
+        logprob_file_entry = ",".join([window_length, adaptor, str(num_states), str(num_comp), str(run), covariance_type, str(total_likelihood_of_training_data)])
         logprob_file.write(logprob_file_entry + "\n")
 
 def tagTrainingData ( model, training_sequences, observation_sequences):
@@ -83,7 +83,7 @@ def saveTaggedSequences ( path_out, tagged_observation_sequences, filenames, out
         filename = filenames[i].replace('.csv', '.tagged.csv')
         tagged_observation_sequence.save(os.path.join(output_dir, filename), include_state=True)
 
-def writeRDataset ( stats_file_path, tagged_observation_sequences, filenames, window_length, adaptor, num_states, num_comp, covariance_type ):
+def writeRDataset ( stats_file_path, tagged_observation_sequences, filenames, window_length, adaptor, num_states, num_comp, run, covariance_type ):
     """
     Aggregates information on @param tagged_observation_sequences into an R dataset
     for further analysis. The dataset is appended to @param stats_file.
@@ -134,7 +134,7 @@ def writeRDataset ( stats_file_path, tagged_observation_sequences, filenames, wi
         all_state_phases_15min.append(state_phases_15min)
     # compose R code for dataframe
     # add filenames
-    dataframe_name = "data." + ".".join([window_length, adaptor, "%sstates" % num_states, "%scomp" % num_comp, covariance_type])
+    dataframe_name = "data." + ".".join([window_length, adaptor, "%sstates" % num_states, "%scomp" % num_comp, "run%s" % run, covariance_type])
     r_code = dataframe_name + " <- data.frame( filename=%s )" % getRVector(filename, to_string=True)
     r_code += " # filename of recorded translation session\n"
     # add session time in ms
@@ -195,9 +195,10 @@ if len(sys.argv) == 10:
     adaptor = sys.argv[6]
     n_states = int(sys.argv[7])
     n_comp = int(sys.argv[8])
-    covariance_type = sys.argv[9]
+    run = int(sys.argv[9])
+    covariance_type = sys.argv[10]
 else:
-    sys.exit("Usage: unsupervisedTraining.py 'path_training_data' path_out path_logprob_file path_data_file window_length adaptor n_states n_comp covariance_type")
+    sys.exit("Usage: unsupervisedTraining.py 'path_training_data' path_out path_logprob_file path_data_file window_length adaptor n_states n_comp run covariance_type")
 
 # read training observation sequences
 observation_sequences, filenames = readObservationSequences(path_training_data, return_filenames=True)
@@ -214,6 +215,6 @@ total_likelihood_of_training_data, tagged_observation_sequences = tagTrainingDat
 # save tagged training data
 saveTaggedSequences(path_out, tagged_observation_sequences, filenames, path_out)
 # write logprob to file
-writeLogprob(path_logprob_file, total_likelihood_of_training_data, window_length, adaptor, n_states, n_comp, covariance_type)
+writeLogprob(path_logprob_file, total_likelihood_of_training_data, window_length, adaptor, n_states, n_comp, run, covariance_type)
 # write basic aggregations for further processing in R to file
-writeRDataset(path_data_file, tagged_observation_sequences, filenames, window_length, adaptor, n_states, n_comp, covariance_type)
+writeRDataset(path_data_file, tagged_observation_sequences, filenames, window_length, adaptor, n_states, n_comp, run, covariance_type)

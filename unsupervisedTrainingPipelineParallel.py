@@ -64,12 +64,13 @@ else:
 BASE_SCRIPT_FULL_PAHT = os.path.join( os.path.dirname(os.path.realpath(__file__)), "unsupervisedTraining.py")
 MAX_NUM_STATES = 10 # max. number of HMM states
 MAX_NUM_COMP = 10 # max. number of GMM mixture components
+NUM_RUNS = 10 # number of runs (to see what effect different random initialisations have)
 COVARIANCE_TYPE = 'full' # covariance type for GMMs (diag or full)
 
 # start global file logprob.csv
 logprob_file_path = os.path.join(base_dir_output, 'logprob.csv')
 with open(logprob_file_path, 'w') as logprob_file:
-    logprob_file_header = "window_length,adaptor,states,components,covariance_type,logprob\n"
+    logprob_file_header = "window_length,adaptor,states,components,covariance_type,run,logprob\n"
     logprob_file.write(logprob_file_header)
 # start global file data.R
 stats_file_path = os.path.join(base_dir_output, 'data.R')
@@ -87,11 +88,13 @@ for window_length in getSubdirectories(base_dir_input):
         #path_training_data = "'" + path_training_data + "'"
         # Iterate over number of hidden states
         for num_states in range(2, MAX_NUM_STATES+1):
-            # train model with num_states and 1..MAX_NUM_COMP mixture components in parallel
-            subprocesses = []
+            # iterate over number of GMM mixture components
             for num_comp in range(1, MAX_NUM_COMP+1):
-                path_out = os.path.join(base_dir_output, window_length, adaptor, "%s_states" % num_states, "%s_comp" % num_comp )
-                arguments = [path_training_data, path_out, logprob_file_path, stats_file_path, window_length, adaptor, str(num_states), str(num_comp), COVARIANCE_TYPE]
-                subprocesses.append( subprocess.Popen(['python', BASE_SCRIPT_FULL_PAHT] + arguments) )
-            exit_codes = [p.wait() for p in subprocesses]
+                subprocesses = []
+                # train model with num_states and num_comp NUM_RUNS times in parallel
+                for run in range(1, NUM_RUNS+1):
+                    path_out = os.path.join(base_dir_output, window_length, adaptor, "%s_states" % num_states, "%s_comp" % num_comp, "run_%s" % run )
+                    arguments = [path_training_data, path_out, logprob_file_path, stats_file_path, window_length, adaptor, str(num_states), str(num_comp), str(run), COVARIANCE_TYPE]
+                    subprocesses.append( subprocess.Popen(['python', BASE_SCRIPT_FULL_PAHT] + arguments) )
+                exit_codes = [p.wait() for p in subprocesses]
             
