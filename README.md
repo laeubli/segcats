@@ -65,6 +65,9 @@ python decode.py -m model.xml training_extracted/P07_P1.xml.csv P07_P1.tagged.cs
 
 where ```training_extracted/P07_P1.xml.csv``` is the session to be tagged, and ```P07_P1.tagged.csv``` is the file that the tagged version of this session should be written to.
 
+### Visualisation of Tagged Translation Sessions
+
+The output of ```decode.py``` can be visualised using [viscats](https://github.com/laeubli/viscats).
 
 ### Further Information
 
