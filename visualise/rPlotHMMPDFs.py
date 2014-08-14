@@ -26,7 +26,7 @@ def removeNS (node_name):
 # static R code (function definitions)
 r_function_code_static = """# ***
 # This code has been automatically generated using segcats.
-# SCROLL TO THE VERY BOTTOM to see how toplot individual or multiple GMMs.
+# SCROLL TO THE VERY BOTTOM to see how to plot individual or multiple GMMs.
 # ***
 
 # Plotting functions

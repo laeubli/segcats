@@ -10,7 +10,7 @@ def getArgumentParser():
     Return an ArgumentParser object to handle the arguments provided
     to this script.
     """
-    parser = argparse.ArgumentParser(description="Extracts observations of multiple event types (e.g., keystrokes, mouse clicks, and eye fixations) from 1..* XML files. The observations are suitable to train a GMM HMM. The types of features to be extracted can be specified by choosing a suitable adaptor (run this program with --help for more information).")
+    parser = argparse.ArgumentParser(description="Extracts observations of multiple event types (e.g., keystrokes, mouse clicks, and eye fixations) from 1..* CasMaCat XML Logs. The observations are suitable to train a GMM-HMM model using train.py. The types of features to be extracted can be specified by choosing a suitable adaptor (run this program with --help for more information).")
     parser.add_argument("source", help="The XML file(s) from which to extract observations. Multiple files can be passed via wildcards, e.g., P*.xml.", type=str, nargs='*')
     parser.add_argument("-o", "--output_dir", help="The target folder where the observation sequences (one CSV file per input XML file) will be stored. The default is the current working directory.", default='', type=str)
     parser.add_argument("-t", "--type", default="window", help="[window|delay] The signal parametrisation type", type=str)

@@ -70,7 +70,7 @@ COVARIANCE_TYPE = 'full' # covariance type for GMMs (diag or full)
 # start global file logprob.csv
 logprob_file_path = os.path.join(base_dir_output, 'logprob.csv')
 with open(logprob_file_path, 'w') as logprob_file:
-    logprob_file_header = "window_length,adaptor,states,components,covariance_type,run,logprob\n"
+    logprob_file_header = "window_length,adaptor,states,components,run,covariance_type,logprob\n"
     logprob_file.write(logprob_file_header)
 # start global file data.R
 stats_file_path = os.path.join(base_dir_output, 'data.R')
